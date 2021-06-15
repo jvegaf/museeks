@@ -1,5 +1,6 @@
 import electron from 'electron';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useHistory } from 'react-router';
 import KeyBinding from 'react-keybinding-component';
 import chunk from 'lodash-es/chunk';
 import { useSelector } from 'react-redux';
@@ -48,7 +49,7 @@ interface Props {
 
 const TracksList: React.FC<Props> = (props) => {
   const { tracks, type, trackPlayingId, reorderable, currentPlaylist, onReorder, playerStatus, playlists } = props;
-
+  const history = useHistory();
   const [tilesScrolled, setTilesScrolled] = useState(0);
   const [selected, setSelected] = useState<string[]>([]);
   const [reordered, setReordered] = useState<string[] | null>([]);
@@ -145,6 +146,15 @@ const TracksList: React.FC<Props> = (props) => {
     [renderView, selected]
   );
 
+  const onDetail = useCallback(
+    (i: number, tracks: TrackModel[]) => {
+      const song = tracks[i];
+      console.log({song});
+      history.push(`/detail/${song._id}`);
+    },
+    [history]
+  );
+
   const onKey = useCallback(
     async (e: KeyboardEvent) => {
       let firstSelectedTrackId = tracks.findIndex((track) => selected.includes(track._id));
@@ -173,12 +183,18 @@ const TracksList: React.FC<Props> = (props) => {
           e.preventDefault();
           await onEnter(firstSelectedTrackId, tracks);
           break;
+        
+        case 'KeyD':
+          e.preventDefault();
+          onDetail(firstSelectedTrackId, tracks);
+          break;
+        
 
         default:
           break;
       }
     },
-    [onControlAll, onDown, onUp, onEnter, selected, tracks]
+    [tracks, selected, onControlAll, onUp, onDown, onEnter, onDetail]
   );
 
   /**

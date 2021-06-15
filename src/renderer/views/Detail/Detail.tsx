@@ -1,141 +1,88 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
-import Placeholder from '../../../images/assets/placeholder.png';
-import * as coverUtils from '../../../shared/lib/utils-cover';
-import { Track } from '../../../shared/types/museeks';
+import React, { useState, useEffect } from 'react';
+import { useSelector } from 'react-redux';
+import { Switch, Route, Redirect, useParams } from 'react-router-dom';
+
+import { Config } from '../../../shared/types/museeks';
+import * as Nav from '../../elements/Nav/Nav';
+import { config } from '../../lib/app';
+import { RootState } from '../../store/reducers';
 import appStyles from '../../App.module.css';
-import { Input, Label, Section } from '../../components/Setting/Setting';
-import Button from '../../elements/Button/Button';
-import { db } from '../../lib/app';
-import { getLoweredMeta, parseDuration } from '../../lib/utils';
-import * as LibraryActions from '../../store/actions/LibraryActions';
+
 import styles from './Detail.module.css';
 
 const Detail: React.FC = () => {
   const { trackId } = useParams<{ trackId: string }>();
-  const [track, setTrack] = useState({} as Track);
-  const [coverSrc, setCoverSrc] = useState('');
+  const tracks = useSelector((state: RootState) => state.library.tracks.library);
   const [data, setData] = useState({
     title: '',
     artist: '',
     album: '',
     genre: '',
-    duration: '',
   });
+  const handleSubmit = e => {
+    e.preventDefault();
+    console.log(data);
+    history.back();
+  };
 
-  const getCover = useCallback(async (path) => {
-    const data = await coverUtils.fetchCover(path);
-    if (data !== null) {
-      setCoverSrc(data);
-    }
-  }, []);
+  const handleChange = e => {
+    e.preventDefault();
+    setData({
+      ...data,
+      [e.target.name]: e.target.value,
+    });
+  };
 
-  const updateSong = useCallback(
-    (data) => {
-      const song = { ...track };
-      song.title = data.title;
-      song.artist.push(data.artist);
-      song.album = data.album;
-      song.genre[0] = data.genre;
-      song.loweredMetas = getLoweredMeta(song);
-      return song;
-    },
-    [track]
-  );
-
-  const handleSubmit = useCallback(
-    async (e) => {
-      e.preventDefault();
-      const song = updateSong(data);
-      await LibraryActions.updateTrack(song);
-      history.back();
-    },
-    [data, updateSong]
-  );
-
-  const handleChange = useCallback(
-    (e) => {
-      e.preventDefault();
-      setData({
-        ...data,
-        [e.target.name]: e.target.value,
-      });
-    },
-    [data]
-  );
-
-  const handleCancel = useCallback((e) => {
+  const handleCancel = (e) => {
     e.preventDefault();
     history.back();
-  }, []);
+  };
 
   useEffect(() => {
-    db.Track.findOne(
-      { _id: trackId },
-      (err: Error, song: Track) => {
-        if (err !== null) return console.log(err);
-        getCover(song.path);
-
-        setTrack(song);
-        setData({
-          title: song.title || '',
-          artist: song.artist[0] || '',
-          album: song.album || '',
-          genre: song.genre[0] || '',
-          duration: parseDuration(song.duration) || '',
-        });
-      },
-      []
-    );
-
+    const song = tracks.find((tr) => tr._id === trackId);
+    setData({
+      title: song.title,
+      artist: song.artist[0],
+      album: song.album,
+      genre: song.genre[0],
+    });
     return () => {
       setData({
         title: '',
         artist: '',
         album: '',
         genre: '',
-        duration: '',
       });
     };
-  }, [getCover, trackId]);
+  }, [trackId, tracks]);
 
   return (
     <div className={`${appStyles.view} ${styles.viewDetail}`}>
-      <form className={styles.detailForm} onSubmit={handleSubmit}>
-        <Section>
-          <Label htmlFor='title'>Title</Label>
-          <Input id='title' name='title' type='text' onChange={handleChange} value={data.title} />
-        </Section>
-        <Section>
-          <Label htmlFor='artist'>Artist</Label>
-          <Input id='artist' name='artist' type='text' onChange={handleChange} value={data.artist} />
-        </Section>
-        <div className={styles.detailRow}>
-          <div className={styles.detailCol}>
-            <Section>
-              <Label htmlFor='album'>Album</Label>
-              <Input id='album' name='album' type='text' onChange={handleChange} value={data.album} />
-            </Section>
-            <Section>
-              <Label htmlFor='genre'>Genre</Label>
-              <Input id='genre' name='genre' type='text' onChange={handleChange} value={data.genre} />
-            </Section>
-            <Section>
-              <Label htmlFor='duration'>Duration</Label>
-              <Input id='duration' name='duration' type='text' readOnly value={data.duration} />
-            </Section>
-          </div>
-          <div className={styles.detailCol}>
-            <div className={styles.detailCover}>
-              {coverSrc === undefined && <img src={Placeholder} alt='Cover' width='150' height='150' />}
-              {coverSrc !== undefined && <img src={coverSrc} alt='Cover' width='150' height='150' />}
-            </div>
-          </div>
-        </div>
-        <div className={styles.detailActions}>
-          <Button onClick={handleCancel}>Cancel</Button>
-          <Button type='submit'>Save</Button>
-        </div>
+      <form onSubmit={handleSubmit}>
+        <label>
+          Title
+          <input name={'title'} type='text' value={data.title} className={styles.detailInput} onChange={handleChange} />
+        </label>
+        <label>
+          Artist
+          <input
+            name={'artist'}
+            type='text'
+            value={data.artist}
+            className={styles.detailInput}
+            onChange={handleChange}
+          />
+        </label>
+        <label>
+          Album
+          <input name={'album'} type='text' value={data.album} className={styles.detailInput} onChange={handleChange} />
+        </label>
+        <label>
+          Genre
+          <input name={'genre'} type='text' value={data.genre} className={styles.detailInput} onChange={handleChange} />
+        </label>
+        <button type='submit'>Save</button>
+        <button onClick={handleCancel}>Cancel</button>
       </form>
     </div>
   );
