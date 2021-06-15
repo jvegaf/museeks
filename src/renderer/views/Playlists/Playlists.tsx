@@ -24,9 +24,8 @@ const Playlists: React.FC = () => {
   const autoRedirect = useCallback(() => {
     // If there is not playlist selected, redirect to the first one
     if (!playlistId) {
-      return <Redirect to={`/playlists/${playlists[0]._id}`} />;
+      return <Redirect to={`/library`} />;
     }
-
     // Maybe this id does not exist in the library anymore
     // (after deleting a library for example)
     if (playlists.every((elem) => elem._id !== playlistId)) {

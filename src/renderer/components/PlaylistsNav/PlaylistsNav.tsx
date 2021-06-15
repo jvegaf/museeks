@@ -14,6 +14,7 @@ const { Menu } = electron.remote;
 
 interface Props {
   playlists: PlaylistModel[];
+  mainView: boolean;
 }
 
 interface State {
@@ -121,6 +122,11 @@ class PlaylistsNav extends React.Component<Props, State> {
   render() {
     const { playlists } = this.props;
 
+    const libNavItem = (
+      <PlaylistsNavLink className={styles.item__link}  mainItem={this.props.mainView} link={'/library'} onContextMenu={this.showContextMenu}>
+        {'🎵 Songs'}
+      </PlaylistsNavLink>
+    );
     // TODO (y.solovyov): extract into separate method that returns items
     const nav = playlists.map((elem) => {
       let navItemContent;
@@ -139,7 +145,7 @@ class PlaylistsNav extends React.Component<Props, State> {
         );
       } else {
         navItemContent = (
-          <PlaylistsNavLink className={styles.item__link} playlistId={elem._id} onContextMenu={this.showContextMenu}>
+          <PlaylistsNavLink className={styles.item__link} playlistId={elem._id} link={`/playlists/${elem._id}`} onContextMenu={this.showContextMenu}>
             {elem.name}
           </PlaylistsNavLink>
         );
@@ -150,15 +156,23 @@ class PlaylistsNav extends React.Component<Props, State> {
 
     return (
       <div className={styles.playlistsNav}>
-        <div className={styles.playlistsNav__header}>
-          <h4 className={styles.playlistsNav__title}>Playlists</h4>
-          <div className={styles.actions}>
-            <button className={styles.action} onClick={this.createPlaylist} title='New playlist'>
-              <Icon name='plus' />
-            </button>
+        <div className={styles.playlistSection}>
+          <div className={styles.playlistsNav__header}>
+            <h4 className={styles.playlistsNav__title}>Library</h4>
           </div>
+          <div className={styles.playlistsNav__body}>{libNavItem}</div>
         </div>
-        <div className={styles.playlistsNav__body}>{nav}</div>
+        <div className={styles.playlistSection}>
+          <div className={styles.playlistsNav__header}>
+            <h4 className={styles.playlistsNav__title}>Playlists</h4>
+            <div className={styles.actions}>
+              <button className={styles.action} onClick={this.createPlaylist} title='New playlist'>
+                <Icon name='plus' />
+              </button>
+            </div>
+          </div>
+          <div className={styles.playlistsNav__body}>{nav}</div>
+        </div>
       </div>
     );
   }

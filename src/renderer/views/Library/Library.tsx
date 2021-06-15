@@ -7,6 +7,7 @@ import TracksList from '../../components/TracksList/TracksList';
 import { filterTracks, sortTracks } from '../../lib/utils-library';
 import SORT_ORDERS from '../../constants/sort-orders';
 import { RootState } from '../../store/reducers';
+import PlaylistsNav from '../../components/PlaylistsNav/PlaylistsNav';  
 
 import appStyles from '../../App.module.css';
 import styles from './Library.module.css';
@@ -85,7 +86,13 @@ const Library: React.FC = () => {
     );
   }, [library, playlists, player, tracks]);
 
-  return <div className={`${appStyles.view} ${styles.viewLibrary}`}>{getLibraryComponent}</div>;
+  // return <div className={`${appStyles.view} ${styles.viewLibrary}`}>{getLibraryComponent}</div>;
+  return (
+    <div className={`${appStyles.view} ${styles.viewPlaylists}`}>
+      <PlaylistsNav playlists={playlists} mainView />
+      <div className={styles.playlist}>{getLibraryComponent}</div>
+    </div>
+  );
 };
 
 export default Library;

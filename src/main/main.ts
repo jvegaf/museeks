@@ -49,7 +49,7 @@ app.on('ready', async () => {
     minWidth: 900,
     minHeight: 550,
     frame: true,
-    autoHideMenuBar: false,
+    autoHideMenuBar:  process.platform !== 'darwin',
     titleBarStyle: 'hiddenInset', // MacOS polished window
     show: false,
     webPreferences: {

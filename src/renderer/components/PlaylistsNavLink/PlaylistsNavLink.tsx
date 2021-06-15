@@ -8,13 +8,14 @@ import styles from './PlaylistsNavLink.module.css';
 interface Props {
   className?: string;
   playlistId: string;
+  mainItem: boolean;
+  link: string;
   onContextMenu: (playlistId: string) => void;
 }
 
 export default class PlaylistsNavLink extends React.Component<Props> {
   constructor(props: Props) {
-    super(props);
-
+    super(props); 
     this.onContextMenu = this.onContextMenu.bind(this);
   }
 
@@ -27,7 +28,7 @@ export default class PlaylistsNavLink extends React.Component<Props> {
       <NavLink
         className={`${this.props.className} ${styles.playlistLink}`}
         activeClassName='-is-active'
-        to={`/playlists/${this.props.playlistId}`}
+        to={this.props.link}
         onContextMenu={this.onContextMenu}
         draggable={false}
         onDoubleClick={() => PlaylistActions.play(this.props.playlistId)}
