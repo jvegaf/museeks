@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { Switch, Route, Redirect, useParams } from 'react-router-dom';
-
+import { Section, Label, Input } from '../../components/Setting/Setting';
+import Button from '../../elements/Button/Button';
 import { Config } from '../../../shared/types/museeks';
 import * as Nav from '../../elements/Nav/Nav';
 import { config } from '../../lib/app';
@@ -19,13 +20,13 @@ const Detail: React.FC = () => {
     album: '',
     genre: '',
   });
-  const handleSubmit = e => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     console.log(data);
     history.back();
   };
 
-  const handleChange = e => {
+  const handleChange = (e) => {
     e.preventDefault();
     setData({
       ...data,
@@ -58,31 +59,51 @@ const Detail: React.FC = () => {
 
   return (
     <div className={`${appStyles.view} ${styles.viewDetail}`}>
-      <form onSubmit={handleSubmit}>
-        <label>
-          Title
-          <input name={'title'} type='text' value={data.title} className={styles.detailInput} onChange={handleChange} />
-        </label>
-        <label>
-          Artist
-          <input
-            name={'artist'}
+      <form className={styles.detailForm} onSubmit={handleSubmit}>
+        <Section>
+          <Label htmlFor='title'>Title</Label>
+          <Input 
+            id='title'
+            name='title'
             type='text'
-            value={data.artist}
-            className={styles.detailInput}
             onChange={handleChange}
+            value={data.title}
           />
-        </label>
-        <label>
-          Album
-          <input name={'album'} type='text' value={data.album} className={styles.detailInput} onChange={handleChange} />
-        </label>
-        <label>
-          Genre
-          <input name={'genre'} type='text' value={data.genre} className={styles.detailInput} onChange={handleChange} />
-        </label>
-        <button type='submit'>Save</button>
-        <button onClick={handleCancel}>Cancel</button>
+        </Section>
+        <Section>
+          <Label htmlFor='artist'>Artist</Label>
+          <Input 
+            id='artist'
+            name='artist'
+            type='text'
+            onChange={handleChange}
+            value={data.artist}
+          />
+        </Section>
+        <Section>
+          <Label htmlFor='album'>Album</Label>
+          <Input 
+            id='album'
+            name='album'
+            type='text'
+            onChange={handleChange}
+            value={data.album}
+          />
+        </Section>
+        <Section>
+          <Label htmlFor='genre'>Genre</Label>
+          <Input 
+            id='genre'
+            name='genre'
+            type='text'
+            onChange={handleChange}
+            value={data.genre}
+          />
+        </Section>
+        <div className={styles.detailActions}>
+          <Button onClick={handleCancel}>Cancel</Button>
+          <Button type='submit'>Save</Button>
+        </div>
       </form>
     </div>
   );
