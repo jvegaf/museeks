@@ -22,10 +22,11 @@ const Detail: React.FC = () => {
   });
   const handleSubmit = (e) => {
     e.preventDefault();
+    // TODO: IMPLEMENT
     console.log(data);
     history.back();
   };
-
+  
   const handleChange = (e) => {
     e.preventDefault();
     setData({
@@ -33,7 +34,7 @@ const Detail: React.FC = () => {
       [e.target.name]: e.target.value,
     });
   };
-
+  
   const handleCancel = (e) => {
     e.preventDefault();
     history.back();

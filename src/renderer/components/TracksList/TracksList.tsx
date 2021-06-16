@@ -185,8 +185,7 @@ const TracksList: React.FC<Props> = (props) => {
           break;
         
         case 'KeyD':
-          e.preventDefault();
-          onDetail(firstSelectedTrackId, tracks);
+          if (isCtrlKey(e)) onDetail(firstSelectedTrackId, tracks);
           break;
         
 
