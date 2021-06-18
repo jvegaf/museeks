@@ -77,7 +77,8 @@ class PlaylistsNav extends React.Component<Props, State> {
 
   async createPlaylist() {
     // Todo 'new playlist 1', 'new playlist 2' ...
-    await PlaylistsActions.create('New playlist', [], false, true);
+    const playlistId = await PlaylistsActions.create('New playlist', [], false, false);
+    this.setState({ renamed: playlistId });
   }
 
   async rename(_id: string, name: string) {
