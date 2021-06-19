@@ -404,12 +404,7 @@ const TracksList: React.FC<Props> = (props) => {
         },
         {
           label: 'View Detail',
-          click: () => {
-            history.push(`/detail/${track._id}`);
-          },
-        },
-        {
-          type: 'separator',
+          click: () => {history.push(`/detail/${track._id}`)}
         },
         {
           label: `Search for "${track.artist[0]}" `,
