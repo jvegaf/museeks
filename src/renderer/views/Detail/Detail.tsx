@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { Switch, Route, Redirect, useParams } from 'react-router-dom';
 import { Section, Label, Input } from '../../components/Setting/Setting';
 import Button from '../../elements/Button/Button';
@@ -8,22 +8,36 @@ import * as Nav from '../../elements/Nav/Nav';
 import { config } from '../../lib/app';
 import { RootState } from '../../store/reducers';
 import appStyles from '../../App.module.css';
+import * as LibraryActions from '../../store/actions/LibraryActions';
 
 import styles from './Detail.module.css';
 
 const Detail: React.FC = () => {
+  const dispatch = useDispatch();
   const { trackId } = useParams<{ trackId: string }>();
   const tracks = useSelector((state: RootState) => state.library.tracks.library);
+  const [track, setTrack] = useState(undefined);
   const [data, setData] = useState({
     title: '',
     artist: '',
     album: '',
     genre: '',
   });
-  const handleSubmit = (e) => {
+
+  const updateSong = data => {
+    const song = {...track};
+    song.title = data.title;
+    song.artist[0] = data.artist;
+    song.album = data.album;
+    song.genre[0] = data.genre;
+    return song;
+  }
+
+  const handleSubmit = e => {
     e.preventDefault();
-    // TODO: IMPLEMENT
-    console.log(data);
+    const song = updateSong(data);
+    console.log(song);
+    dispatch(LibraryActions.updateTrack(song));
     history.back();
   };
   
@@ -42,11 +56,12 @@ const Detail: React.FC = () => {
 
   useEffect(() => {
     const song = tracks.find((tr) => tr._id === trackId);
+    setTrack(song);
     setData({
-      title: song.title,
-      artist: song.artist[0],
-      album: song.album,
-      genre: song.genre[0],
+      title: song.title || '',
+      artist: song.artist[0] || '',
+      album: song.album || '',
+      genre: song.genre[0] || '',
     });
     return () => {
       setData({
