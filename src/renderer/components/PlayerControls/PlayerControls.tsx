@@ -28,7 +28,9 @@ export default class PlayerControls extends React.PureComponent<Props> {
         <button type='button' className={styles.control} title='Next' onClick={PlayerActions.next}>
           <Icon name='forward' />
         </button>
-        <VolumeControl />
+        <div className={styles.headVolume}>
+          <VolumeControl />
+        </div>
       </div>
     );
   }

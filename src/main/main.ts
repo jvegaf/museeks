@@ -46,8 +46,8 @@ app.on('ready', async () => {
     y: bounds.y,
     width: bounds.width,
     height: bounds.height,
-    minWidth: 900,
-    minHeight: 550,
+    minWidth: 1230,
+    minHeight: 750,
     frame: true,
     autoHideMenuBar:  process.platform !== 'darwin',
     titleBarStyle: 'hiddenInset', // MacOS polished window
