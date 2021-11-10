@@ -5,7 +5,6 @@ import KeyBinding from 'react-keybinding-component';
 import chunk from 'lodash-es/chunk';
 import { useSelector } from 'react-redux';
 
-import { useHistory } from 'react-router';
 import TrackRow from '../TrackRow/TrackRow';
 import CustomScrollbar from '../CustomScrollbar/CustomScrollbar';
 import TracksListHeader from '../TracksListHeader/TracksListHeader';
@@ -49,7 +48,6 @@ interface Props {
 
 const TracksList: React.FC<Props> = (props) => {
   const { tracks, type, trackPlayingId, reorderable, currentPlaylist, onReorder, playerStatus, playlists } = props;
-  const history = useHistory();
   const [tilesScrolled, setTilesScrolled] = useState(0);
   const [selected, setSelected] = useState<string[]>([]);
   const [reordered, setReordered] = useState<string[] | null>([]);
