@@ -6,21 +6,6 @@
   width: 100%;
 }
 
-.tracks-list-body {
-  overflow: auto;
-  flex: 1 1 auto;
-}
-
-.tiles {
-  position: relative;
-}
-
-.tile {
-  position: absolute;
-  width: 100%;
-  z-index: 10;
-}
-
 .cell {
   padding: 3px 4px;
   cursor: default;

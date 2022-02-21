@@ -34,7 +34,7 @@ html {
 body {
   -webkit-user-select: none;
   margin: 0;
-  font-family: -apple-system, 'Inter', BlinkMacSystemFont, 'Segoe UI' Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+  font-family: 'Inter', sans-serif;
   color: var(--text);
   font-size: 12px;
   user-select: none;
