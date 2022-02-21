@@ -8,7 +8,6 @@ import * as LibraryActions from '../../store/actions/LibraryActions';
 import { RootState } from '../../store/reducers';
 import styles from './Detail.module.css';
 
-
 const Detail: React.FC = () => {
   const dispatch = useDispatch();
   const { trackId } = useParams<{ trackId: string }>();
@@ -21,23 +20,23 @@ const Detail: React.FC = () => {
     genre: '',
   });
 
-  const updateSong = data => {
-    const song = {...track};
+  const updateSong = (data) => {
+    const song = { ...track };
     song.title = data.title;
     song.artist[0] = data.artist;
     song.album = data.album;
     song.genre[0] = data.genre;
     return song;
-  }
+  };
 
-  const handleSubmit = e => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     const song = updateSong(data);
     console.log(song);
     dispatch(LibraryActions.updateTrack(song));
     history.back();
   };
-  
+
   const handleChange = (e) => {
     e.preventDefault();
     setData({
@@ -45,7 +44,7 @@ const Detail: React.FC = () => {
       [e.target.name]: e.target.value,
     });
   };
-  
+
   const handleCancel = (e) => {
     e.preventDefault();
     history.back();
@@ -75,43 +74,19 @@ const Detail: React.FC = () => {
       <form className={styles.detailForm} onSubmit={handleSubmit}>
         <Section>
           <Label htmlFor='title'>Title</Label>
-          <Input 
-            id='title'
-            name='title'
-            type='text'
-            onChange={handleChange}
-            value={data.title}
-          />
+          <Input id='title' name='title' type='text' onChange={handleChange} value={data.title} />
         </Section>
         <Section>
           <Label htmlFor='artist'>Artist</Label>
-          <Input 
-            id='artist'
-            name='artist'
-            type='text'
-            onChange={handleChange}
-            value={data.artist}
-          />
+          <Input id='artist' name='artist' type='text' onChange={handleChange} value={data.artist} />
         </Section>
         <Section>
           <Label htmlFor='album'>Album</Label>
-          <Input 
-            id='album'
-            name='album'
-            type='text'
-            onChange={handleChange}
-            value={data.album}
-          />
+          <Input id='album' name='album' type='text' onChange={handleChange} value={data.album} />
         </Section>
         <Section>
           <Label htmlFor='genre'>Genre</Label>
-          <Input 
-            id='genre'
-            name='genre'
-            type='text'
-            onChange={handleChange}
-            value={data.genre}
-          />
+          <Input id='genre' name='genre' type='text' onChange={handleChange} value={data.genre} />
         </Section>
         <div className={styles.detailActions}>
           <Button onClick={handleCancel}>Cancel</Button>

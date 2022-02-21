@@ -147,7 +147,7 @@ const TracksList: React.FC<Props> = (props) => {
   const onDetail = useCallback(
     (i: number, tracks: TrackModel[]) => {
       const song = tracks[i];
-      console.log({song});
+      console.log({ song });
       history.push(`/detail/${song._id}`);
     },
     [history]
@@ -181,11 +181,10 @@ const TracksList: React.FC<Props> = (props) => {
           e.preventDefault();
           await onEnter(firstSelectedTrackId, tracks);
           break;
-        
+
         case 'KeyD':
           if (isCtrlKey(e)) onDetail(firstSelectedTrackId, tracks);
           break;
-        
 
         default:
           break;
@@ -402,7 +401,9 @@ const TracksList: React.FC<Props> = (props) => {
         },
         {
           label: 'View Detail',
-          click: () => {history.push(`/detail/${track._id}`)}
+          click: () => {
+            history.push(`/detail/${track._id}`);
+          },
         },
         {
           label: `Search for "${track.artist[0]}" `,

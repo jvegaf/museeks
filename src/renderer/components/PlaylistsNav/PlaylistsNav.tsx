@@ -124,7 +124,12 @@ class PlaylistsNav extends React.Component<Props, State> {
     const { playlists } = this.props;
 
     const libNavItem = (
-      <PlaylistsNavLink className={styles.item__link}  mainItem={this.props.mainView} link={'/library'} onContextMenu={this.showContextMenu}>
+      <PlaylistsNavLink
+        className={styles.item__link}
+        mainItem={this.props.mainView}
+        link={'/library'}
+        onContextMenu={this.showContextMenu}
+      >
         {'🎵 Songs'}
       </PlaylistsNavLink>
     );
@@ -146,7 +151,12 @@ class PlaylistsNav extends React.Component<Props, State> {
         );
       } else {
         navItemContent = (
-          <PlaylistsNavLink className={styles.item__link} playlistId={elem._id} link={`/playlists/${elem._id}`} onContextMenu={this.showContextMenu}>
+          <PlaylistsNavLink
+            className={styles.item__link}
+            playlistId={elem._id}
+            link={`/playlists/${elem._id}`}
+            onContextMenu={this.showContextMenu}
+          >
             {elem.name}
           </PlaylistsNavLink>
         );

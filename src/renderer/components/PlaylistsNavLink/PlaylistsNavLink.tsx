@@ -15,7 +15,7 @@ interface Props {
 
 export default class PlaylistsNavLink extends React.Component<Props> {
   constructor(props: Props) {
-    super(props); 
+    super(props);
     this.onContextMenu = this.onContextMenu.bind(this);
   }
 
