@@ -1,0 +1,143 @@
+.tracks-list-header {
+  border-bottom: 1px solid var(--border-color);
+  color: var(--tracks-header-color);
+  background-color: var(--tracks-header-bg);
+  display: flex;
+  width: 100%;
+}
+
+.tracks-list-body {
+  overflow: auto;
+  flex: 1 1 auto;
+}
+
+.tiles {
+  position: relative;
+}
+
+.tile {
+  position: absolute;
+  width: 100%;
+  z-index: 10;
+}
+
+.cell {
+  padding: 3px 4px;
+  cursor: default;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 24px;
+}
+
+.track {
+  position: relative;
+  display: flex;
+  outline: none;
+
+  &:nth-child(odd) {
+    background-color: var(--tracks-bg-odd);
+  }
+
+  &:nth-child(even) {
+    background-color: var(--tracks-bg-even);
+  }
+
+  &.selected {
+    background-color: var(--main-color);
+    color: white;
+
+    /* // put that elsewhere someday
+    .playing-indicator {
+
+      .animation {
+
+        .bar {
+          background-color: #EEE;
+        }
+      }
+    } */
+  }
+
+  &.reordered {
+    opacity: 0.5;
+  }
+
+  &.is-reordered-over {
+    &::after {
+      pointer-events: none;
+      position: absolute;
+      z-index: 1;
+      display: block;
+      width: 100%;
+      content: '';
+      border-bottom: solid 2px var(--main-color);
+    }
+
+    &.is-above::after {
+      top: -1px;
+    }
+
+    &.is-below::after {
+      bottom: -1px;
+    }
+  }
+}
+
+.track-cell-header {
+  font-weight: 700;
+  -webkit-appearance: none;
+  border: 0;
+  text-align: left;
+  padding: 0;
+  cursor: default;
+  display: flex;
+  align-items: center;
+  color: inherit;
+
+  &.sort:focus {
+    background-color: rgba(0, 0, 0, 0.025);
+  }
+
+  &.sort:active {
+    background-color: rgba(0, 0, 0, 0.04);
+  }
+
+  .icon {
+    padding-right: 6px;
+  }
+
+  .name {
+    flex: 1;
+    margin: 4px 0;
+    padding: 0 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &:not(:first-child) {
+    .name {
+      border-left: 1px solid var(--border-color);
+    }
+  }
+}
+
+.cell-track-playing {
+  width: 30px;
+  text-align: center;
+}
+
+.cell-track {
+  flex: 1;
+}
+
+.cell-duration {
+  width: 7%;
+}
+
+.cell-artist,
+.cell-album,
+.cell-genre {
+  width: 20%;
+}

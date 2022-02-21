@@ -7,7 +7,8 @@ import TracksList from '../../components/TracksList/TracksList';
 import { filterTracks, sortTracks } from '../../lib/utils-library';
 import SORT_ORDERS from '../../constants/sort-orders';
 import { RootState } from '../../store/reducers';
-import PlaylistsNav from '../../components/PlaylistsNav/PlaylistsNav';  
+import PlaylistsNav from '../../components/PlaylistsNav/PlaylistsNav';
+import TracksTable from '../../components/TracksTable/TracksTable';
 
 import appStyles from '../../App.module.css';
 import styles from './Library.module.css';
@@ -76,7 +77,7 @@ const Library: React.FC = () => {
 
     // All good !
     return (
-      <TracksList
+      <TracksTable
         type='library'
         playerStatus={playerStatus}
         tracks={tracks}
