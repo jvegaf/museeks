@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import cx from 'classnames';
 import { AutoSizer, Column, Table } from 'react-virtualized';
+import PlayingIndicator from '../PlayingIndicator/PlayingIndicator';
 import * as PlayerActions from '../../store/actions/PlayerActions';
 import { parseDuration } from '../../lib/utils';
 import styles from './TracksTable.module.css';
@@ -17,7 +18,7 @@ interface Props {
 }
 
 const TracksTable: React.FC<Props> = (props: Props) => {
-  const { tracks } = props;
+  const { tracks, trackPlayingId } = props;
   const [selected, setSelected] = useState(null);
 
   const clickHandler = ({ event, index, rowData }) => {
@@ -30,13 +31,23 @@ const TracksTable: React.FC<Props> = (props: Props) => {
 
   const getRowClasses = useCallback(
     ({ index }) => {
-      if (index === -1) return '';
+      if (index === -1) return styles.tracksListHeader;
       if (selected === null) return styles.track;
       return cx(styles.track, {
         [styles.selected]: selected === index,
       });
     },
     [selected]
+  );
+
+  const IsPlaying = useCallback(
+    (rowData) => {
+      if (trackPlayingId === null) return '';
+      if (rowData._id === trackPlayingId) {
+        return (<PlayingIndicator />);
+      }
+    },
+    [trackPlayingId]
   );
 
   return (
@@ -55,7 +66,15 @@ const TracksTable: React.FC<Props> = (props: Props) => {
           rowCount={tracks.length}
           rowGetter={({ index }) => tracks[index]}
         >
-          {/* <Column label='' id='playing' width={width * 0.03} headerClassName={styles.trackCellHeader} className={styles.cell} /> */}
+          <Column
+            label=''
+            dataKey='playing'
+            id='playing'
+            cellRenderer={({rowData}) => IsPlaying(rowData)}
+            width={width * 0.03}
+            headerClassName={styles.trackCellHeader}
+            className={styles.cell}
+          />
           <Column
             label='Title'
             dataKey='title'
@@ -65,6 +84,7 @@ const TracksTable: React.FC<Props> = (props: Props) => {
           />
           <Column
             label='Artist'
+            dataKey='artist'
             width={width * 0.25}
             headerClassName={styles.trackCellHeader}
             id='artist'
