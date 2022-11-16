@@ -22,6 +22,7 @@ export enum SortBy {
 }
 
 export enum SortOrder {
+
   ASC = 'asc',
   DSC = 'dsc',
 }
@@ -66,28 +67,31 @@ export type LinvoSchema<Schema> = {
  * App models
  */
 export interface Track {
-  album: string;
-  artist: string[];
-  disk: {
+  album?: string;
+  artist?: string[];
+  bpm?: number;
+  bitrate?: number;
+  disk?: {
     no: number;
     of: number;
   };
   duration: number;
-  genre: string[];
+  genre?: string[];
+  key?: string;
   loweredMetas: {
-    artist: string[];
-    album: string;
-    title: string;
-    genre: string[];
+    artist?: string[];
+    album?: string; 
+    title?: string;
+    genre?: string[];
   };
   path: string;
   playCount: number;
   title: string;
-  track: {
+  track?: {
     no: number;
     of: number;
   };
-  year: number | null;
+  year?: number | null;
 }
 
 export interface Playlist {
@@ -162,4 +166,32 @@ export interface Theme {
   name: string;
   themeSource: Electron.NativeTheme['themeSource'];
   variables: Record<string, string>;
+}
+
+export interface ResultTag {
+  id: string;
+  album?: string;
+  artist?: string;
+  bpm?: number;
+  genre?: string;
+  key?: string;
+  duration: number;
+  title: string;
+  year?: string;
+  artworkUrl?: string;
+  tokens: string[];
+}
+
+export interface Artwork {
+  mime?: string;
+  type: { id: number; name: string };
+  description?: string;
+  imageBuffer: Buffer;
+}
+
+export interface MatchResult {
+  tag: ResultTag;
+  trackTokens: string[];
+  matches: number;
+  of: number;
 }
