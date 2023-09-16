@@ -1,10 +1,15 @@
 import axios from 'axios';
-import { handleResponse, handleError } from '../response';
+
+import { ResultTag } from '../../../shared/types/resultTag.type';
+import logger from '../../../shared/lib/logger';
+
+import { handleResponse, handleError } from './response';
 import BeatportToken from './BeaportToken';
 import { BuildBeatportQuery } from './querybuilder';
 import GetTagResults from './bpTagMapper';
-import type { ResultTag } from '../../../shared/types/emusik';
-import { log } from '../log/log';
+
+
+
 
 const URI_BASE = 'https://api.beatport.com/v4/catalog/search/?q=';
 
@@ -34,10 +39,10 @@ export const SearchTags = async(
   const token = await getToken();
 
   const query = BuildBeatportQuery(title, artist);
-  log.info(`query: ${query}`);
+  logger.info(`query: ${query}`);
 
   const uri = `${URI_BASE}${query}`;
-  log.info(`URI: ${uri}`);
+  logger.info(`URI: ${uri}`);
 
   const config = {
     headers: {

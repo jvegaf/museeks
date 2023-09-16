@@ -2,6 +2,7 @@ import logger from '../../../shared/lib/logger';
 import type { MatchResult, ResultTag, Track } from '../../../shared/types/museeks';
 import { GetStringTokens } from '../../../shared/utils';
 import Update from '../track/updater';
+
 import { SearchTags } from './beatport';
 
 
@@ -29,7 +30,7 @@ const SearchOnBeatport = async(track: Track): Promise<MatchResult | null> => {
   const { title, artist, duration } = track;
   const reqAggregate: string[]      = [ title ];
   if (artist){
-    reqAggregate.push(artist);
+    reqAggregate.push(...artist);
   }
   const trackTokens = GetStringTokens(reqAggregate);
   const bpResults   = await SearchTags(title, artist);
