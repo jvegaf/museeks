@@ -1,8 +1,6 @@
 import types from '../action-types';
-
-import { config } from '../../lib/app';
-import * as utils from '../../lib/utils';
 import { Action, TrackModel, SortBy, SortOrder } from '../../../shared/types/museeks';
+import { stripAccents } from '../../../shared/lib/utils-id3';
 
 export interface LibrarySort {
   by: SortBy;
@@ -31,7 +29,7 @@ const initialState: LibraryState = {
     playlist: [],
   },
   search: '',
-  sort: config.get('librarySort'),
+  sort: window.MuseeksAPI.config.getx('librarySort'),
   loading: true,
   refreshing: false,
   refresh: {
@@ -41,7 +39,7 @@ const initialState: LibraryState = {
   highlightPlayingTrack: false,
 };
 
-export default (state = initialState, action: Action): LibraryState => {
+export default function libraryReducer(state = initialState, action: Action): LibraryState {
   switch (action.type) {
     case types.LIBRARY_REFRESH: {
       return {
@@ -73,8 +71,8 @@ export default (state = initialState, action: Action): LibraryState => {
         order: SortOrder.ASC,
       };
 
-      config.set('librarySort', sort);
-      config.save();
+      window.MuseeksAPI.config.set('librarySort', sort);
+      window.MuseeksAPI.config.save();
 
       return {
         ...state,
@@ -85,13 +83,13 @@ export default (state = initialState, action: Action): LibraryState => {
     case types.FILTER_SEARCH: {
       return {
         ...state,
-        search: utils.stripAccents(action.payload.search),
+        search: stripAccents(action.payload.search),
       };
     }
 
     // case (types.LIBRARY_ADD_FOLDERS): { // TODO Redux -> move to a thunk
     //   const { folders } = action.payload;
-    //   let musicFolders = app.config.get('musicFolders');
+    //   let musicFolders = window.MuseeksAPI.config.get('musicFolders');
 
     //   // Check if we received folders
     //   if (folders !== undefined) {
@@ -102,8 +100,8 @@ export default (state = initialState, action: Action): LibraryState => {
 
     //     musicFolders.sort();
 
-    //     app.config.set('musicFolders', musicFolders);
-    //     app.config.saveSync();
+    //     window.MuseeksAPI.config.set('musicFolders', musicFolders);
+    //     window.MuseeksAPI.config.saveSync();
     //   }
 
     //   return { ...state };
@@ -111,12 +109,12 @@ export default (state = initialState, action: Action): LibraryState => {
 
     // case (types.LIBRARY_REMOVE_FOLDER): { // TODO Redux -> move to a thunk
     //   if (!state.library.refreshing) {
-    //     const musicFolders = app.config.get('musicFolders');
+    //     const musicFolders = window.MuseeksAPI.config.get('musicFolders');
 
     //     musicFolders.splice(action.index, 1);
 
-    //     app.config.set('musicFolders', musicFolders);
-    //     app.config.saveSync();
+    //     window.MuseeksAPI.config.set('musicFolders', musicFolders);
+    //     window.MuseeksAPI.config.saveSync();
 
     //     return { ...state };
     //   }
@@ -203,4 +201,4 @@ export default (state = initialState, action: Action): LibraryState => {
       return state;
     }
   }
-};
+}

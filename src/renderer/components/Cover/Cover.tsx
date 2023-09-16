@@ -1,28 +1,24 @@
-import { ipcRenderer } from 'electron';
-import React, { useEffect, useState } from 'react';
-import channels from '../../../shared/lib/ipc-channels';
+import { useEffect, useState } from 'react';
+
+import { Track } from '../../../shared/types/museeks';
 
 import styles from './Cover.module.css';
 
-interface Props {
-  path: string;
-}
+type Props = {
+  track: Track;
+};
 
-interface State {
-  coverPath: string | null;
-}
-
-const Cover: React.FC<Props> = (props) => {
+export default function Cover(props: Props) {
   const [coverPath, setCoverPath] = useState<string | null>(null);
 
   useEffect(() => {
     const refreshCover = async () => {
-      const coverPath = await ipcRenderer.invoke(channels.COVER_GET, props.path);
+      const coverPath = await window.MuseeksAPI.covers.getCoverAsBase64(props.track);
       setCoverPath(coverPath);
     };
 
     refreshCover();
-  }, [props.path]);
+  }, [props.track]);
 
   if (coverPath) {
     const encodedCoverPath = encodeURI(coverPath).replace(/'/g, "\\'").replace(/"/g, '\\"');
@@ -36,6 +32,4 @@ const Cover: React.FC<Props> = (props) => {
       <div className={styles.cover__note}>♪</div>
     </div>
   );
-};
-
-export default Cover;
+}

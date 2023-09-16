@@ -3,16 +3,18 @@
  */
 
 import { ipcMain, nativeTheme } from 'electron';
+import TeenyConf from 'teeny-conf';
+
 import channels from '../../shared/lib/ipc-channels';
 import { themes } from '../../shared/lib/themes';
 import { Config, Theme } from '../../shared/types/museeks';
-import ConfigModule from './config';
+
 import ModuleWindow from './module-window';
 
-class NativeThemeModule extends ModuleWindow {
-  protected config: ConfigModule;
+export default class NativeThemeModule extends ModuleWindow {
+  protected config: TeenyConf<Config>;
 
-  constructor(window: Electron.BrowserWindow, config: ConfigModule) {
+  constructor(window: Electron.BrowserWindow, config: TeenyConf<Config>) {
     super(window);
 
     this.config = config;
@@ -40,7 +42,7 @@ class NativeThemeModule extends ModuleWindow {
       this.setThemeId(themeId);
     });
 
-    ipcMain.handle(channels.THEME_GET, (_event) => {
+    ipcMain.handle(channels.THEME_GET, () => {
       let themeId = this.getThemeId();
 
       if (themeId === '__system') themeId = this.getSystemThemeId();
@@ -54,7 +56,7 @@ class NativeThemeModule extends ModuleWindow {
   }
 
   getThemeId(): Config['theme'] {
-    return this.config.get('theme');
+    return this.config.get('theme') ?? '__system';
   }
 
   setThemeId(themeId: Config['theme']): void {
@@ -86,5 +88,3 @@ class NativeThemeModule extends ModuleWindow {
     return nativeTheme.shouldUseDarkColors ? 'dark' : 'light';
   }
 }
-
-export default NativeThemeModule;

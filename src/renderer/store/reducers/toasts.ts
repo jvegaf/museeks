@@ -1,12 +1,11 @@
 import types from '../action-types';
-
 import { Toast, Action } from '../../../shared/types/museeks';
 
 export type ToastsState = Toast[];
 
 const initialState: ToastsState = [];
 
-export default (state = initialState, action: Action): ToastsState => {
+export default function (state = initialState, action: Action): ToastsState {
   switch (action.type) {
     case types.TOAST_ADD: {
       const toasts = [...state, action.payload.toast];
@@ -22,4 +21,4 @@ export default (state = initialState, action: Action): ToastsState => {
       return state;
     }
   }
-};
+}

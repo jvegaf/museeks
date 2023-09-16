@@ -1,14 +1,14 @@
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 import cx from 'classnames';
 
 import PlayingIndicator from '../PlayingIndicator/PlayingIndicator';
 import { parseDuration } from '../../lib/utils';
 import { TrackModel } from '../../../shared/types/museeks';
-
 import cellStyles from '../TracksListHeader/TracksListHeader.module.css';
+
 import styles from './TrackRow.module.css';
 
-interface Props {
+type Props = {
   selected: boolean;
   track: TrackModel;
   index: number;
@@ -24,128 +24,94 @@ interface Props {
   onDragOver?: (trackId: string, position: 'above' | 'below') => void;
   onDragEnd?: () => void;
   onDrop?: (targetTrackId: string, position: 'above' | 'below') => void;
-}
+};
 
-interface State {
-  reorderOver: boolean;
-  reorderPosition: 'above' | 'below' | null;
-}
+export default function TrackRow(props: Props) {
+  const [reorderOver, setReorderOver] = useState(false);
+  const [reorderPosition, setReorderPosition] = useState<'above' | 'below' | null>(null);
 
-export default class TrackRow extends React.PureComponent<Props, State> {
-  constructor(props: Props) {
-    super(props);
+  const { track, index, selected, draggable, reordered, onMouseDown, onClick, onContextMenu, onDoubleClick } = props;
 
-    this.state = {
-      reorderOver: false,
-      reorderPosition: null,
-    };
-  }
+  // TODO: migrate to react-dnd
+  const onDragStart = useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      if (props.onDragStart) {
+        event.dataTransfer.setData('text/plain', props.track._id);
+        event.dataTransfer.dropEffect = 'move';
+        event.dataTransfer.effectAllowed = 'move';
 
-  onMouseDown = (e: React.MouseEvent) => {
-    this.props.onMouseDown(e, this.props.track._id, this.props.index);
-  };
+        props.onDragStart();
+      }
+    },
+    [props]
+  );
 
-  onClick = (e: React.MouseEvent | React.KeyboardEvent) => {
-    this.props.onClick(e, this.props.track._id);
-  };
-
-  onContextMenu = (e: React.MouseEvent) => {
-    this.props.onContextMenu(e, this.props.index);
-  };
-
-  onDoubleClick = () => {
-    this.props.onDoubleClick(this.props.track._id);
-  };
-
-  onDragStart = (event: React.DragEvent<HTMLDivElement>) => {
-    const { onDragStart } = this.props;
-
-    if (onDragStart) {
-      event.dataTransfer.setData('text/plain', this.props.track._id);
-      event.dataTransfer.dropEffect = 'move';
-      event.dataTransfer.effectAllowed = 'move';
-
-      onDragStart();
-    }
-  };
-
-  onDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+  const onDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
 
     const relativePosition = event.nativeEvent.offsetY / event.currentTarget.offsetHeight;
     const dragPosition = relativePosition < 0.5 ? 'above' : 'below';
 
-    this.setState({
-      reorderOver: true,
-      reorderPosition: dragPosition,
-    });
-  };
+    setReorderOver(true);
+    setReorderPosition(dragPosition);
+  }, []);
 
-  onDragLeave = (_event: React.DragEvent<HTMLDivElement>) => {
-    this.setState({
-      reorderOver: false,
-      reorderPosition: null,
-    });
-  };
+  const onDragLeave = useCallback(() => {
+    setReorderOver(false);
+    setReorderPosition(null);
+  }, []);
 
-  onDrop = (_event: React.DragEvent<HTMLDivElement>) => {
-    const { reorderPosition } = this.state;
-    const { onDrop } = this.props;
+  const onDrop = useCallback(() => {
+    const { onDrop } = props;
 
     if (reorderPosition && onDrop) {
-      onDrop(this.props.track._id, reorderPosition);
+      onDrop(props.track._id, reorderPosition);
     }
 
-    this.setState({
-      reorderOver: false,
-      reorderPosition: null,
-    });
-  };
+    setReorderOver(false);
+    setReorderPosition(null);
+  }, [props, reorderPosition]);
 
-  render() {
-    const { track, selected, reordered, draggable } = this.props;
-    const { reorderOver, reorderPosition } = this.state;
+  const trackClasses = cx(styles.track, {
+    [styles.trackOdd]: index % 2 === 1,
+    [styles.selected]: selected,
+    [styles.reordered]: reordered,
+    [styles.isReorderedOver]: reorderOver,
+    [styles.isAbove]: reorderPosition === 'above',
+    [styles.isBelow]: reorderPosition === 'below',
+  });
 
-    const trackClasses = cx(styles.track, {
-      [styles.selected]: selected,
-      [styles.reordered]: reordered,
-      [styles.isReorderedOver]: reorderOver,
-      [styles.isAbove]: reorderPosition === 'above',
-      [styles.isBelow]: reorderPosition === 'below',
-    });
-
-    return (
-      <div
-        className={trackClasses}
-        onDoubleClick={this.onDoubleClick}
-        onMouseDown={this.onMouseDown}
-        onClick={this.onClick}
-        onKeyPress={(e) => {
-          if (e.key === 'Enter') {
-            this.onClick(e);
-          }
-        }}
-        onContextMenu={this.onContextMenu}
-        role='option'
-        aria-selected={selected}
-        tabIndex={-1} // we do not want trackrows to be focusable by the keyboard
-        draggable={draggable}
-        onDragStart={(draggable && this.onDragStart) || undefined}
-        onDragOver={(draggable && this.onDragOver) || undefined}
-        onDragLeave={(draggable && this.onDragLeave) || undefined}
-        onDrop={(draggable && this.onDrop) || undefined}
-        onDragEnd={(draggable && this.props.onDragEnd) || undefined}
-        {...(this.props.isPlaying ? { 'data-is-playing': true } : {})}
-      >
-        <div className={`${styles.cell} ${cellStyles.cellTrackPlaying}`}>
-          {this.props.isPlaying ? <PlayingIndicator /> : null}
-        </div>
-        <div className={`${styles.cell} ${cellStyles.cellTrack}`}>{track.title}</div>
-        <div className={`${styles.cell} ${cellStyles.cellDuration}`}>{parseDuration(track.duration)}</div>
-        <div className={`${styles.cell} ${cellStyles.cellArtist}`}>{track.artist.sort().join(', ')}</div>
-        <div className={`${styles.cell} ${cellStyles.cellAlbum}`}>{track.album}</div>
-        <div className={`${styles.cell} ${cellStyles.cellGenre}`}>{track.genre.join(', ')}</div>
+  return (
+    <div
+      className={trackClasses}
+      onDoubleClick={() => onDoubleClick(props.track._id)}
+      onMouseDown={(e) => onMouseDown(e, track._id, index)}
+      onClick={(e) => onClick(e, props.track._id)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          onClick(e, track._id);
+        }
+      }}
+      onContextMenu={(e) => onContextMenu(e, index)}
+      role='option'
+      aria-selected={selected}
+      tabIndex={-1} // we do not want trackrows to be focusable by the keyboard
+      draggable={draggable}
+      onDragStart={(draggable && onDragStart) || undefined}
+      onDragOver={(draggable && onDragOver) || undefined}
+      onDragLeave={(draggable && onDragLeave) || undefined}
+      onDrop={(draggable && onDrop) || undefined}
+      onDragEnd={(draggable && props.onDragEnd) || undefined}
+      {...(props.isPlaying ? { 'data-is-playing': true } : {})}
+    >
+      <div className={`${styles.cell} ${cellStyles.cellTrackPlaying}`}>
+        {props.isPlaying ? <PlayingIndicator /> : null}
       </div>
-    );
-  }
+      <div className={`${styles.cell} ${cellStyles.cellTrack}`}>{track.title}</div>
+      <div className={`${styles.cell} ${cellStyles.cellDuration}`}>{parseDuration(track.duration)}</div>
+      <div className={`${styles.cell} ${cellStyles.cellArtist}`}>{track.artist.sort().join(', ')}</div>
+      <div className={`${styles.cell} ${cellStyles.cellAlbum}`}>{track.album}</div>
+      <div className={`${styles.cell} ${cellStyles.cellGenre}`}>{track.genre.join(', ')}</div>
+    </div>
+  );
 }

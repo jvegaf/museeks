@@ -4,9 +4,9 @@ import * as semver from 'semver';
 import store from '../store';
 import types from '../action-types';
 import channels from '../../../shared/lib/ipc-channels';
-import * as app from '../../lib/app';
 import { Theme } from '../../../shared/types/museeks';
 import logger from '../../../shared/lib/logger';
+
 import * as ToastsActions from './ToastsActions';
 
 interface UpdateCheckOptions {
@@ -45,7 +45,7 @@ export const checkTheme = async (): Promise<void> => {
  * Check and enable sleep blocker if needed
  */
 export const checkSleepBlocker = (): void => {
-  if (app.config.get('sleepBlocker')) {
+  if (window.MuseeksAPI.config.get('sleepBlocker')) {
     ipcRenderer.send('settings:toggleSleepBlocker', true);
   }
 };
@@ -54,7 +54,7 @@ export const checkSleepBlocker = (): void => {
  * Check if a new release is available
  */
 export const checkForUpdate = async (options: UpdateCheckOptions = {}): Promise<void> => {
-  const currentVersion = app.version;
+  const currentVersion = window.MuseeksAPI.version;
 
   try {
     const response = await fetch('https://api.github.com/repos/martpie/museeks/releases');
@@ -86,7 +86,7 @@ export const checkForUpdate = async (options: UpdateCheckOptions = {}): Promise<
 export const check = async (): Promise<void> => {
   await checkTheme();
   checkSleepBlocker();
-  if (app.config.get('autoUpdateChecker')) {
+  if (window.MuseeksAPI.config.get('autoUpdateChecker')) {
     checkForUpdate({ silentFail: true }).catch((err) => {
       logger.error(err);
     });
@@ -97,8 +97,8 @@ export const check = async (): Promise<void> => {
  * Toggle sleep blocker
  */
 export const toggleSleepBlocker = (value: boolean): void => {
-  app.config.set('sleepBlocker', value);
-  app.config.save();
+  window.MuseeksAPI.config.set('sleepBlocker', value);
+  window.MuseeksAPI.config.save();
 
   ipcRenderer.send('settings:toggleSleepBlocker', value);
 
@@ -111,8 +111,8 @@ export const toggleSleepBlocker = (value: boolean): void => {
  * Set the default view of the app
  */
 export const setDefaultView = (value: string): void => {
-  app.config.set('defaultView', value);
-  app.config.save();
+  window.MuseeksAPI.config.set('defaultView', value);
+  window.MuseeksAPI.config.save();
 
   store.dispatch({
     type: types.REFRESH_CONFIG,
@@ -123,8 +123,8 @@ export const setDefaultView = (value: string): void => {
  * Toggle update check on startup
  */
 export const toggleAutoUpdateChecker = (value: boolean): void => {
-  app.config.set('autoUpdateChecker', value);
-  app.config.save();
+  window.MuseeksAPI.config.set('autoUpdateChecker', value);
+  window.MuseeksAPI.config.save();
 
   store.dispatch({
     type: types.REFRESH_CONFIG,
@@ -135,8 +135,8 @@ export const toggleAutoUpdateChecker = (value: boolean): void => {
  * Toggle minimize-to-tray
  */
 export const toggleMinimizeToTray = (value: boolean): void => {
-  app.config.set('minimizeToTray', value);
-  app.config.save();
+  window.MuseeksAPI.config.set('minimizeToTray', value);
+  window.MuseeksAPI.config.save();
 
   store.dispatch({
     type: types.REFRESH_CONFIG,
@@ -147,8 +147,8 @@ export const toggleMinimizeToTray = (value: boolean): void => {
  * Toggle native notifications display
  */
 export const toggleDisplayNotifications = (value: boolean): void => {
-  app.config.set('displayNotifications', value);
-  app.config.save();
+  window.MuseeksAPI.config.set('displayNotifications', value);
+  window.MuseeksAPI.config.save();
 
   store.dispatch({
     type: types.REFRESH_CONFIG,

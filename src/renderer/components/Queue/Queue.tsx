@@ -6,30 +6,26 @@ import { TrackModel } from '../../../shared/types/museeks';
 
 import styles from './Queue.module.css';
 
-interface Props {
+type Props = {
   queue: TrackModel[];
   queueCursor: number | null;
-}
+};
 
-class Queue extends React.PureComponent<Props> {
-  render() {
-    const { queue, queueCursor } = this.props;
-    let content: React.ReactNode;
+export default function Queue(props: Props) {
+  const { queue, queueCursor } = props;
+  let content: React.ReactNode;
 
-    if (queueCursor !== null) {
-      const shownQueue = queue.slice(queueCursor + 1, queueCursor + 21);
+  if (queueCursor !== null) {
+    const shownQueue = queue.slice(queueCursor + 1, queueCursor + 21);
 
-      if (shownQueue.length === 0) {
-        content = <QueueEmpty />;
-      } else {
-        content = <QueueList queue={queue} queueCursor={queueCursor} />;
-      }
-
-      return <div className={`${styles.queue} text-left`}>{content}</div>;
+    if (shownQueue.length === 0) {
+      content = <QueueEmpty />;
+    } else {
+      content = <QueueList queue={queue} queueCursor={queueCursor} />;
     }
 
-    return null;
+    return <div className={`${styles.queue} text-left`}>{content}</div>;
   }
-}
 
-export default Queue;
+  return null;
+}

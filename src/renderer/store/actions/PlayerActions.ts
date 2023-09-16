@@ -1,24 +1,20 @@
-import electron from 'electron';
-
 import { debounce } from 'lodash-es';
-import history from '../../lib/history';
-import store from '../store';
-import { PlayerState } from '../reducers/player';
+import { ipcRenderer } from 'electron';
 
+import store from '../store';
 import types from '../action-types';
 import SORT_ORDERS from '../../constants/sort-orders';
-
-import * as app from '../../lib/app';
-import Player from '../../lib/player';
 import { sortTracks, filterTracks } from '../../lib/utils-library';
 import { shuffleTracks } from '../../lib/utils-player';
 import { TrackModel, PlayerStatus, Repeat } from '../../../shared/types/museeks';
-import channels from '../../../shared/lib/ipc-channels';
 import logger from '../../../shared/lib/logger';
-import * as ToastsActions from './ToastsActions';
-import * as LibraryActions from './LibraryActions';
+import Player from '../../lib/player';
+import initMediaSession from '../../lib/media-session';
+import channels from '../../../shared/lib/ipc-channels';
+import router from '../../views/router';
 
-const { ipcRenderer } = electron;
+import * as LibraryActions from './LibraryActions';
+import * as ToastsActions from './ToastsActions';
 
 const AUDIO_ERRORS = {
   aborted: 'The video playback was aborted.',
@@ -27,11 +23,74 @@ const AUDIO_ERRORS = {
   unknown: 'An unknown error occurred.',
 };
 
+const { player, config } = window.MuseeksAPI;
+
+/**
+ * Bind various player events to actions. Needs unification at some point
+ */
+export const init = (player: Player) => {
+  initMediaSession(player);
+
+  // Bind player events
+  // Audio Events
+  player.getAudio().addEventListener('ended', next);
+  player.getAudio().addEventListener('error', audioError);
+  player.getAudio().addEventListener('timeupdate', async () => {
+    if (player.isThresholdReached()) {
+      const track = player.getTrack();
+      if (track) await LibraryActions.incrementPlayCount(track._id);
+    }
+  });
+
+  // How to unify Player, Main process state, and PlayerActions?
+  player.getAudio().addEventListener('play', async () => {
+    const track = player.getTrack();
+
+    if (!track) throw new Error('Track is undefined');
+
+    ipcRenderer.send(channels.PLAYBACK_PLAY, track ?? null);
+    ipcRenderer.send(channels.PLAYBACK_TRACK_CHANGE, track);
+  });
+
+  player.getAudio().addEventListener('pause', () => {
+    ipcRenderer.send(channels.PLAYBACK_PAUSE);
+  });
+
+  // Listen for main-process events
+  ipcRenderer.on(channels.PLAYBACK_PLAY, () => {
+    if (player.getTrack()) {
+      play();
+    } else {
+      start();
+    }
+  });
+
+  ipcRenderer.on(channels.PLAYBACK_PAUSE, () => {
+    pause();
+  });
+
+  ipcRenderer.on(channels.PLAYBACK_PLAYPAUSE, () => {
+    playPause();
+  });
+
+  ipcRenderer.on(channels.PLAYBACK_PREVIOUS, () => {
+    previous();
+  });
+
+  ipcRenderer.on(channels.PLAYBACK_NEXT, () => {
+    next();
+  });
+
+  ipcRenderer.on(channels.PLAYBACK_STOP, () => {
+    stop();
+  });
+};
+
 /**
  * Play/resume audio
  */
 export const play = async (): Promise<void> => {
-  await Player.play();
+  await player.play();
   store.dispatch({
     type: types.PLAYER_PLAY,
   });
@@ -41,7 +100,7 @@ export const play = async (): Promise<void> => {
  * Pause audio
  */
 export const pause = (): void => {
-  Player.pause();
+  player.pause();
   store.dispatch({
     type: types.PLAYER_PAUSE,
   });
@@ -61,11 +120,12 @@ export const start = async (queue?: TrackModel[], _id?: string): Promise<void> =
     newQueue = state.player.queue;
   }
 
-  const { pathname } = history.location;
+  // FIXME: code smell
+  const { hash } = window.location;
 
   // If no queue is provided, we create it based on the screen the user is on
   if (!newQueue) {
-    if (pathname.indexOf('/playlists') === 0) {
+    if (hash.startsWith('#/playlists')) {
       newQueue = state.library.tracks.playlist;
     } else {
       // we are either on the library or the settings view
@@ -94,8 +154,8 @@ export const start = async (queue?: TrackModel[], _id?: string): Promise<void> =
   if (queuePosition > -1) {
     const track = newQueue[queuePosition];
 
-    Player.setTrack(track);
-    await Player.play();
+    player.setTrack(track);
+    await player.play();
 
     let queueCursor = queuePosition; // Clean that variable mess later
 
@@ -109,13 +169,7 @@ export const start = async (queue?: TrackModel[], _id?: string): Promise<void> =
 
     // Determine the queue origin in case the user wants to jump to the current
     // track
-    let queueOrigin: PlayerState['queueOrigin'] = null;
-
-    if (pathname.indexOf('/playlists') === 0) {
-      queueOrigin = pathname;
-    } else {
-      queueOrigin = '/library';
-    }
+    const queueOrigin = hash.substring(1); // remove #
 
     store.dispatch({
       type: types.PLAYER_START,
@@ -133,7 +187,7 @@ export const start = async (queue?: TrackModel[], _id?: string): Promise<void> =
  * Toggle play/pause
  */
 export const playPause = async (): Promise<void> => {
-  const { paused } = Player.getAudio();
+  const { paused } = player.getAudio();
   // TODO (y.solovyov | martpie): calling getState is a hack.
   const { queue, playerStatus } = store.getState().player;
 
@@ -150,12 +204,10 @@ export const playPause = async (): Promise<void> => {
  * Stop the player
  */
 export const stop = (): void => {
-  Player.stop();
+  player.stop();
   store.dispatch({
     type: types.PLAYER_STOP,
   });
-
-  ipcRenderer.send(channels.PLAYBACK_STOP);
 };
 
 /**
@@ -180,8 +232,8 @@ export const next = async (): Promise<void> => {
 
     // tslint:disable-next-line strict-type-predicates
     if (track !== undefined) {
-      Player.setTrack(track);
-      await Player.play();
+      player.setTrack(track);
+      await player.play();
       store.dispatch({
         type: types.PLAYER_NEXT,
         payload: {
@@ -199,7 +251,7 @@ export const next = async (): Promise<void> => {
  * treshold
  */
 export const previous = async (): Promise<void> => {
-  const currentTime = Player.getCurrentTime();
+  const currentTime = player.getCurrentTime();
 
   // TODO (y.solovyov | martpie): calling getState is a hack.
   const { queue, queueCursor } = store.getState().player;
@@ -216,8 +268,8 @@ export const previous = async (): Promise<void> => {
 
     // tslint:disable-next-line
     if (newTrack !== undefined) {
-      Player.setTrack(newTrack);
-      await Player.play();
+      player.setTrack(newTrack);
+      await player.play();
 
       store.dispatch({
         type: types.PLAYER_PREVIOUS,
@@ -236,8 +288,8 @@ export const previous = async (): Promise<void> => {
  * Enable/disable shuffle
  */
 export const shuffle = (value: boolean): void => {
-  app.config.set('audioShuffle', value);
-  app.config.save();
+  config.set('audioShuffle', value);
+  config.save();
 
   store.dispatch({
     type: types.PLAYER_SHUFFLE,
@@ -251,8 +303,8 @@ export const shuffle = (value: boolean): void => {
  * Enable disable repeat
  */
 export const repeat = (value: Repeat): void => {
-  app.config.set('audioRepeat', value);
-  app.config.save();
+  config.set('audioRepeat', value);
+  config.save();
 
   store.dispatch({
     type: types.PLAYER_REPEAT,
@@ -266,14 +318,14 @@ export const repeat = (value: Repeat): void => {
  * Set volume
  */
 export const setVolume = (volume: number): void => {
-  Player.setVolume(volume);
+  player.setVolume(volume);
 
   saveVolume(volume);
 };
 
 const saveVolume = debounce((volume: number) => {
-  app.config.set('audioVolume', volume);
-  app.config.save();
+  config.set('audioVolume', volume);
+  config.save();
 
   store.dispatch({
     type: types.REFRESH_CONFIG,
@@ -284,11 +336,11 @@ const saveVolume = debounce((volume: number) => {
  * Mute/unmute the audio
  */
 export const setMuted = (muted = false): void => {
-  if (muted) Player.mute();
-  else Player.unmute();
+  if (muted) player.mute();
+  else player.unmute();
 
-  app.config.set('audioMuted', muted);
-  app.config.save();
+  config.set('audioMuted', muted);
+  config.save();
 
   store.dispatch({
     type: types.REFRESH_CONFIG,
@@ -301,10 +353,10 @@ export const setMuted = (muted = false): void => {
 export const setPlaybackRate = (value: number): void => {
   if (value >= 0.5 && value <= 5) {
     // if in allowed range
-    Player.setPlaybackRate(value);
+    player.setPlaybackRate(value);
 
-    app.config.set('audioPlaybackRate', value);
-    app.config.save();
+    config.set('audioPlaybackRate', value);
+    config.save();
 
     store.dispatch({
       type: types.REFRESH_CONFIG,
@@ -318,12 +370,13 @@ export const setPlaybackRate = (value: number): void => {
 export const setOutputDevice = (deviceId = 'default'): void => {
   if (deviceId) {
     try {
-      Player.setOutputDevice(deviceId)
+      player
+        .setOutputDevice(deviceId)
         .then(() => {
-          app.config.set('audioOutputDevice', deviceId);
-          app.config.save();
+          config.set('audioOutputDevice', deviceId);
+          config.save();
         })
-        .catch((err) => {
+        .catch((err: Error) => {
           throw err;
         });
     } catch (err) {
@@ -339,7 +392,7 @@ export const setOutputDevice = (deviceId = 'default'): void => {
 export const jumpTo = (to: number): void => {
   // TODO (y.solovyov) do we want to set some explicit state?
   // if yes, what should it be? if not, do we need this actions at all?
-  Player.setCurrentTime(to);
+  player.setCurrentTime(to);
   store.dispatch({
     type: types.PLAYER_JUMP_TO,
   });
@@ -349,10 +402,12 @@ export const jumpTo = (to: number): void => {
  * Toggle play/pause
  */
 export const jumpToPlayingTrack = async (): Promise<void> => {
-  const queueOrigin = store.getState().player.queueOrigin ?? '/library';
-  history.push(queueOrigin);
+  const queueOrigin = store.getState().player.queueOrigin ?? '#/library';
+  await router.navigate(queueOrigin);
 
-  LibraryActions.highlightPlayingTrack(true);
+  setTimeout(() => {
+    LibraryActions.highlightPlayingTrack(true);
+  }, 0);
 };
 
 /**

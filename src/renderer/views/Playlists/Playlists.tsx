@@ -1,18 +1,16 @@
-import React, { useCallback } from 'react';
+import { useCallback } from 'react';
 import { useSelector } from 'react-redux';
-import { useParams } from 'react-router-dom';
-import { Navigate, Outlet } from 'react-router';
+import { useParams, Navigate, Outlet } from 'react-router-dom';
 
 import PlaylistsNav from '../../components/PlaylistsNav/PlaylistsNav';
 import * as ViewMessage from '../../elements/ViewMessage/ViewMessage';
-
 import * as PlaylistsActions from '../../store/actions/PlaylistsActions';
 import { RootState } from '../../store/reducers';
+import appStyles from '../../views/Root.module.css';
 
-import appStyles from '../../App.module.css';
 import styles from './Playlists.module.css';
 
-const Playlists: React.FC = () => {
+export default function Playlists() {
   const { playlistId } = useParams<{ playlistId?: string }>();
   const playlists = useSelector((state: RootState) => state.playlists.list);
   const playlistsLoading = useSelector((state: RootState) => state.playlists.loading);
@@ -74,6 +72,4 @@ const Playlists: React.FC = () => {
       <div className={styles.playlist}>{playlistContent}</div>
     </div>
   );
-};
-
-export default Playlists;
+}

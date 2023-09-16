@@ -6,16 +6,18 @@
  */
 
 import path from 'path';
+
 import { nativeImage, ipcMain } from 'electron';
 
 import channels from '../../shared/lib/ipc-channels';
+
 import ModuleWindow from './module-window';
 
 const { createFromPath } = nativeImage;
 
-const iconsDirectory = path.resolve(path.join(__dirname, '../../src/images/icons/windows'));
+const iconsDirectory = path.resolve(path.join(__dirname, '../../src/shared/assets/icons/windows'));
 
-class ThumbarModule extends ModuleWindow {
+export default class ThumbarModule extends ModuleWindow {
   constructor(window: Electron.BrowserWindow) {
     super(window);
     this.platforms = ['win32'];
@@ -96,7 +98,7 @@ class ThumbarModule extends ModuleWindow {
       },
     };
 
-    ipcMain.on(channels.APP_READY, () => {
+    ipcMain.once(channels.APP_READY, () => {
       window.setThumbarButtons([thumbarButtons.prevDisabled, thumbarButtons.play, thumbarButtons.nextDisabled]);
     });
 
@@ -113,5 +115,3 @@ class ThumbarModule extends ModuleWindow {
     });
   }
 }
-
-export default ThumbarModule;

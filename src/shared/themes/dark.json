@@ -37,16 +37,14 @@
     "--search-bg": "hsl(216, 20%, 7%)",
     "--slider-bg": "hsl(216, 20%, 7%)",
 
-    "--scrollbar-track": "hsl(216, 20%, 15%)",
-    "--scrollbar-thumb": "rgba(255, 255, 255, 0.2)",
-
     "--queue-bg": "hsl(216, 20%, 7%)",
     "--queue-header-bg": "hsl(216, 20%, 11%)",
 
     "--checkbox-bg": "hsl(216, 20%, 17%)",
     "--input-bg": "hsl(216, 20%, 15%)",
     "--input-color": "#efefef",
-    "--button-bg": "hsl(216, 20%, 15%)",
+    "--button-bg": "hsl(216, 20%, 20%)",
+    "--button-border": "rgb(255 255 255 / 0.2)",
     "--button-color": "#efefef"
   }
 }

@@ -1,16 +1,15 @@
-import React, { useCallback } from 'react';
-import { useLocation } from 'react-router';
-import { NavLink } from 'react-router-dom';
+import { useCallback } from 'react';
+import { useLocation, NavLink } from 'react-router-dom';
 import Icon from 'react-fontawesome';
 import { useSelector } from 'react-redux';
 
 import { getStatus } from '../../lib/utils-library';
 import { RootState } from '../../store/reducers';
-
 import ProgressBar from '../ProgressBar/ProgressBar';
+
 import styles from './Footer.module.css';
 
-const Footer: React.FC = () => {
+export default function Footer() {
   const library = useSelector((state: RootState) => state.library);
   useLocation();
   const isPlaylistView = useLocation().pathname.startsWith('/playlists');
@@ -19,11 +18,14 @@ const Footer: React.FC = () => {
     const { processed, total } = library.refresh;
 
     if (library.refreshing) {
+      // Sketchy,
+      const isScanning = total === 0;
       const progress = total > 0 ? Math.round((processed / total) * 100) : 100;
+
       return (
         <div className={styles.footer__libraryRefresh}>
           <div className={styles.footer__libraryRefresh__progress}>
-            <ProgressBar progress={progress} animated={total === 0} />
+            {isScanning ? <>scanning tracks...</> : <ProgressBar progress={progress} animated={total === 0} />}
           </div>
           {total > 0 && (
             <div className={styles.footer__libraryRefresh__count}>
@@ -78,6 +80,4 @@ const Footer: React.FC = () => {
       <div className={styles.footer__status}>{getStatusContent()}</div>
     </footer>
   );
-};
-
-export default Footer;
+}

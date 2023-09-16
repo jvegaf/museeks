@@ -1,11 +1,16 @@
 import path from 'path';
-import * as fs from 'fs';
-import * as chardet from 'chardet';
-import * as iconv from 'iconv-lite';
+import fs from 'fs';
+
+import chardet from 'chardet';
+import iconv from 'iconv-lite';
+
 import logger from '../../shared/lib/logger';
 
 const isFile = (path: string) => fs.lstatSync(path).isFile();
 
+/**
+ * Analyze a .m3u file and returns the resolved path of each song from it
+ */
 export const parse = (filePath: string): string[] => {
   try {
     const baseDir = path.parse(filePath).dir;

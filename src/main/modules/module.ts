@@ -3,11 +3,12 @@
  */
 
 import os from 'os';
+
 import logger from '../../shared/lib/logger';
 
-class Module {
+export default class Module {
   protected loaded: boolean;
-  protected platforms: string[];
+  protected platforms: NodeJS.Platform[];
 
   constructor() {
     this.loaded = false;
@@ -34,5 +35,3 @@ class Module {
     // Do whatever you want here :)
   }
 }
-
-export default Module;

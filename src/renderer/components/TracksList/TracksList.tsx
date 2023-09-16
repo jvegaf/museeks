@@ -1,85 +1,68 @@
-import electron from 'electron';
-import { Menu } from '@electron/remote';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import type { MenuItemConstructorOptions } from 'electron';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import KeyBinding from 'react-keybinding-component';
-import chunk from 'lodash-es/chunk';
 import { useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
+import { Virtuoso, VirtuosoHandle } from 'react-virtuoso';
 
-import { useNavigate } from 'react-router';
 import TrackRow from '../TrackRow/TrackRow';
-import CustomScrollbar from '../CustomScrollbar/CustomScrollbar';
 import TracksListHeader from '../TracksListHeader/TracksListHeader';
-
 import * as LibraryActions from '../../store/actions/LibraryActions';
 import * as PlaylistsActions from '../../store/actions/PlaylistsActions';
 import * as PlayerActions from '../../store/actions/PlayerActions';
 import * as QueueActions from '../../store/actions/QueueActions';
-
-import { isLeftClick, isRightClick } from '../../lib/utils-events';
-import { isCtrlKey, isAltKey } from '../../lib/utils-platform';
-import { PlaylistModel, TrackModel, PlayerStatus } from '../../../shared/types/museeks';
+import { isLeftClick, isRightClick, isCtrlKey, isAltKey } from '../../lib/utils-events';
+import { PlaylistModel, TrackModel } from '../../../shared/types/museeks';
 import { RootState } from '../../store/reducers';
-
-import scrollbarStyles from '../CustomScrollbar/CustomScrollbar.module.css';
 import headerStyles from '../Header/Header.module.css';
+
 import styles from './TracksList.module.css';
 
-const { shell } = electron;
+const { Menu } = window.MuseeksAPI.remote;
 
-const CHUNK_LENGTH = 20;
-const ROW_HEIGHT = 30; // FIXME
-const TILES_TO_DISPLAY = 5;
-const TILE_HEIGHT = ROW_HEIGHT * CHUNK_LENGTH;
+const ROW_HEIGHT = 30; // FIXME (make that dynamic or rem?)
 
 // --------------------------------------------------------------------------
 // TrackList
 // --------------------------------------------------------------------------
 
-interface Props {
+type Props = {
   type: string;
-  playerStatus: string;
   tracks: TrackModel[];
   trackPlayingId: string | null;
   playlists: PlaylistModel[];
   currentPlaylist?: string;
   reorderable?: boolean;
   onReorder?: (playlistId: string, tracksIds: string[], targetTrackId: string, position: 'above' | 'below') => void;
-}
+};
 
-const TracksList: React.FC<Props> = (props) => {
-  const { tracks, type, trackPlayingId, reorderable, currentPlaylist, onReorder, playerStatus, playlists } = props;
+export default function TracksList(props: Props) {
+  const { tracks, type, trackPlayingId, reorderable, currentPlaylist, onReorder, playlists } = props;
 
-  const [tilesScrolled, setTilesScrolled] = useState(0);
   const [selected, setSelected] = useState<string[]>([]);
   const [reordered, setReordered] = useState<string[] | null>([]);
-  const [renderView, setRenderView] = useState<HTMLElement | null>(null);
+  const virtuosoRef = useRef<VirtuosoHandle>(null);
   const navigate = useNavigate();
 
   const highlight = useSelector<RootState, boolean>((state) => state.library.highlightPlayingTrack);
 
   // Highlight playing track and scroll to it
+  // Super-mega-hacky to use Redux for that
   useEffect(() => {
-    if (highlight === true && trackPlayingId && renderView) {
+    if (highlight === true && trackPlayingId && virtuosoRef.current) {
       setSelected([trackPlayingId]);
 
       const playingTrackIndex = tracks.findIndex((track) => track._id === trackPlayingId);
 
       if (playingTrackIndex >= 0) {
-        const nodeOffsetTop = playingTrackIndex * ROW_HEIGHT;
-
-        renderView.scrollTop = nodeOffsetTop;
+        virtuosoRef.current.scrollToIndex({
+          index: playingTrackIndex,
+        });
       }
 
       LibraryActions.highlightPlayingTrack(false);
     }
-  }, [highlight, trackPlayingId, renderView, tracks]);
-
-  // FIXME: find a way to use a real ref for the render view
-  useEffect(() => {
-    const element = document.querySelector(`.${scrollbarStyles.renderView}`);
-
-    if (element instanceof HTMLElement) setRenderView(element);
-  }, []);
+  }, [highlight, trackPlayingId, tracks]);
 
   /**
    * Helpers
@@ -95,54 +78,49 @@ const TracksList: React.FC<Props> = (props) => {
   /**
    * Keyboard navigations events/helpers
    */
-  const onEnter = useCallback(async (i: number, tracks: TrackModel[]) => {
-    if (i !== -1) PlayerActions.start(tracks, tracks[i]._id);
+  const onEnter = useCallback(async (index: number, tracks: TrackModel[]) => {
+    if (index !== -1) PlayerActions.start(tracks, tracks[index]._id);
   }, []);
 
-  const onControlAll = useCallback(
-    (i: number, tracks: TrackModel[]) => {
-      setSelected(tracks.map((track) => track._id));
-      const nodeOffsetTop = (i - 1) * ROW_HEIGHT;
-
-      if (renderView && renderView.scrollTop > nodeOffsetTop) renderView.scrollTop = nodeOffsetTop;
-    },
-    [renderView]
-  );
+  const onControlAll = useCallback((tracks: TrackModel[]) => {
+    setSelected(tracks.map((track) => track._id));
+  }, []);
 
   const onUp = useCallback(
-    (i: number, tracks: TrackModel[], shiftKeyPressed: boolean) => {
-      if (i - 1 >= 0) {
-        // Issue #489, shift key modifier
-        let newSelected = selected;
+    (index: number, tracks: TrackModel[], shiftKeyPressed: boolean) => {
+      const addedIndex = Math.max(0, index - 1);
 
-        if (shiftKeyPressed) newSelected = [tracks[i - 1]._id, ...selected];
-        else newSelected = [tracks[i - 1]._id];
+      // Add to the selection if shift key is pressed
+      let newSelected = selected;
 
-        setSelected(newSelected);
-        const nodeOffsetTop = (i - 1) * ROW_HEIGHT;
-        if (renderView && renderView.scrollTop > nodeOffsetTop) renderView.scrollTop = nodeOffsetTop;
+      if (shiftKeyPressed) newSelected = [tracks[addedIndex]._id, ...selected];
+      else newSelected = [tracks[addedIndex]._id];
+
+      setSelected(newSelected);
+
+      if (virtuosoRef.current) {
+        virtuosoRef.current.scrollIntoView({ index: addedIndex });
       }
     },
-    [renderView, selected]
+    [selected]
   );
 
   const onDown = useCallback(
-    (i: number, tracks: TrackModel[], shiftKeyPressed: boolean) => {
-      if (i + 1 < tracks.length) {
-        // Issue #489, shift key modifier
-        let newSelected = selected;
-        if (shiftKeyPressed) newSelected.push(tracks[i + 1]._id);
-        else newSelected = [tracks[i + 1]._id];
+    (index: number, tracks: TrackModel[], shiftKeyPressed: boolean) => {
+      const addedIndex = Math.min(tracks.length - 1, index + 1);
 
-        setSelected(newSelected);
-        const nodeOffsetTop = (i + 1) * ROW_HEIGHT;
+      // Add to the selection if shift key is pressed
+      let newSelected = selected;
+      if (shiftKeyPressed) newSelected = [...selected, tracks[addedIndex]._id];
+      else newSelected = [tracks[addedIndex]._id];
 
-        if (renderView && renderView.scrollTop + renderView.offsetHeight <= nodeOffsetTop + ROW_HEIGHT) {
-          renderView.scrollTop = nodeOffsetTop - renderView.offsetHeight + ROW_HEIGHT;
-        }
+      setSelected(newSelected);
+
+      if (virtuosoRef.current) {
+        virtuosoRef.current.scrollIntoView({ index: addedIndex });
       }
     },
-    [renderView, selected]
+    [selected]
   );
 
   const onKey = useCallback(
@@ -152,7 +130,7 @@ const TracksList: React.FC<Props> = (props) => {
       switch (e.code) {
         case 'KeyA':
           if (isCtrlKey(e)) {
-            onControlAll(firstSelectedTrackId, tracks);
+            onControlAll(tracks);
             e.preventDefault();
           }
           break;
@@ -318,8 +296,8 @@ const TracksList: React.FC<Props> = (props) => {
         shownPlaylists = playlists.filter((elem) => elem._id !== currentPlaylist);
       }
 
-      const playlistTemplate: electron.MenuItemConstructorOptions[] = [];
-      let addToQueueTemplate: electron.MenuItemConstructorOptions[] = [];
+      const playlistTemplate: MenuItemConstructorOptions[] = [];
+      let addToQueueTemplate: MenuItemConstructorOptions[] = [];
 
       if (shownPlaylists) {
         playlistTemplate.push(
@@ -369,7 +347,7 @@ const TracksList: React.FC<Props> = (props) => {
         },
       ];
 
-      const template: electron.MenuItemConstructorOptions[] = [
+      const template: MenuItemConstructorOptions[] = [
         {
           label: selectedCount > 1 ? `${selectedCount} tracks selected` : `${selectedCount} track selected`,
           enabled: false,
@@ -449,7 +427,7 @@ const TracksList: React.FC<Props> = (props) => {
         {
           label: 'Show in file manager',
           click: () => {
-            shell.showItemInFolder(track.path);
+            window.MuseeksAPI.library.showTrackInFolder(track);
           },
         },
         {
@@ -464,88 +442,39 @@ const TracksList: React.FC<Props> = (props) => {
 
       context.popup({}); // Let it appear
     },
-    [currentPlaylist, playerStatus, playlists, selected, tracks, type, navigate]
+    [currentPlaylist, playlists, selected, tracks, type, navigate]
   );
-
-  /**
-   * Tracks list virtualization + rendering
-   */
-
-  const onScroll = useCallback(() => {
-    if (renderView) {
-      const nextTilesScrolled = Math.floor(renderView.scrollTop / TILE_HEIGHT);
-
-      if (tilesScrolled !== nextTilesScrolled) {
-        setTilesScrolled(nextTilesScrolled);
-      }
-    }
-  }, [tilesScrolled, renderView]);
-
-  const trackTiles = useMemo(() => {
-    const tracksChunked = chunk(tracks, CHUNK_LENGTH);
-
-    return tracksChunked.splice(tilesScrolled, TILES_TO_DISPLAY).map((tracksChunk, indexChunk) => {
-      const list = tracksChunk.map((track, index) => {
-        const trackRowIndex = (tilesScrolled + indexChunk) * CHUNK_LENGTH + index;
-
-        return (
-          <TrackRow
-            selected={selected.includes(track._id)}
-            track={track}
-            isPlaying={trackPlayingId === track._id}
-            key={`track-${track._id}`}
-            index={trackRowIndex}
-            onMouseDown={selectTrack}
-            onClick={selectTrackClick}
-            onContextMenu={showContextMenu}
-            onDoubleClick={startPlayback}
-            draggable={reorderable}
-            reordered={(reordered && reordered.includes(track._id)) || false}
-            onDragStart={onReorderStart}
-            onDragEnd={onReorderEnd}
-            onDrop={onDrop}
-          />
-        );
-      });
-
-      const translationDistance = tilesScrolled * ROW_HEIGHT * CHUNK_LENGTH + indexChunk * ROW_HEIGHT * CHUNK_LENGTH;
-      const tracksListTileStyles = {
-        transform: `translate3d(0, ${translationDistance}px, 0)`,
-      };
-
-      return (
-        <div className={styles.tile} key={`chunk-${tracksChunk[0]._id}`} style={tracksListTileStyles}>
-          {list}
-        </div>
-      );
-    });
-  }, [
-    reordered,
-    selected,
-    tilesScrolled,
-    reorderable,
-    trackPlayingId,
-    tracks,
-    onDrop,
-    onReorderStart,
-    onReorderEnd,
-    selectTrack,
-    selectTrackClick,
-    showContextMenu,
-    startPlayback,
-  ]);
 
   return (
     <div className={styles.tracksList}>
       <KeyBinding onKey={onKey} preventInputConflict />
       <TracksListHeader enableSort={type === 'library'} />
-      <CustomScrollbar className={styles.tracksListBody} onScroll={onScroll}>
-        <div className={styles.tiles} role='listbox' style={{ height: tracks.length * ROW_HEIGHT }}>
-          {trackTiles}
-        </div>
-      </CustomScrollbar>
+      <Virtuoso
+        ref={virtuosoRef}
+        data={tracks}
+        totalCount={tracks.length}
+        fixedItemHeight={ROW_HEIGHT}
+        className={styles.tracksListBody}
+        itemContent={(index, track) => {
+          return (
+            <TrackRow
+              selected={selected.includes(track._id)}
+              track={tracks[index]}
+              isPlaying={trackPlayingId === track._id}
+              index={index}
+              onMouseDown={selectTrack}
+              onClick={selectTrackClick}
+              onContextMenu={showContextMenu}
+              onDoubleClick={startPlayback}
+              draggable={reorderable}
+              reordered={(reordered && reordered.includes(track._id)) || false}
+              onDragStart={onReorderStart}
+              onDragEnd={onReorderEnd}
+              onDrop={onDrop}
+            />
+          );
+        }}
+      />
     </div>
   );
-};
-
-export default TracksList;
+}

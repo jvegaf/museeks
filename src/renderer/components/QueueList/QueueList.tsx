@@ -1,9 +1,7 @@
 import React, { useCallback, useState } from 'react';
 
 import QueueListItem from '../QueueListItem/QueueListItem';
-
 import * as QueueActions from '../../store/actions/QueueActions';
-
 import { getStatus } from '../../lib/utils-library';
 import { TrackModel } from '../../../shared/types/museeks';
 import Button from '../../elements/Button/Button';
@@ -15,7 +13,7 @@ type Props = {
   queueCursor: number;
 };
 
-const QueueList: React.FC<Props> = (props) => {
+export default function QueueList(props: Props) {
   const [draggedTrackIndex, setDraggedTrackIndex] = useState<number | null>(null);
   const [draggedOverTrackIndex, setDraggedOverTrackIndex] = useState<number | null>(null);
   const [dragPosition, setDragPosition] = useState<null | 'above' | 'below'>(null);
@@ -106,6 +104,4 @@ const QueueList: React.FC<Props> = (props) => {
       </div>
     </>
   );
-};
-
-export default QueueList;
+}

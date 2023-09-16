@@ -4,11 +4,12 @@
  */
 
 import { Menu, shell } from 'electron';
+
 import channels from '../../shared/lib/ipc-channels';
 
 import ModuleWindow from './module-window';
 
-class ApplicationMenuModule extends ModuleWindow {
+export default class ApplicationMenuModule extends ModuleWindow {
   async load(): Promise<void> {
     const template: Electron.MenuItemConstructorOptions[] = [
       { role: 'appMenu' },
@@ -69,5 +70,3 @@ class ApplicationMenuModule extends ModuleWindow {
     Menu.setApplicationMenu(menu);
   }
 }
-
-export default ApplicationMenuModule;

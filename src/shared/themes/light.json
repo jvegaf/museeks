@@ -37,16 +37,14 @@
     "--search-bg": "white",
     "--slider-bg": "#DADADA",
 
-    "--scrollbar-track": "#DDDDDD",
-    "--scrollbar-thumb": "rgba(0, 0, 0, .25)",
-
     "--queue-bg": "white",
     "--queue-header-bg": "rgb(244, 244, 244)",
 
     "--checkbox-bg": "#F4F4F4",
     "--input-bg": "#F4F4F4",
     "--input-color": "#333333",
-    "--button-bg": "#F4F4F4",
+    "--button-bg": "#E4E4E4",
+    "--button-border": "rgb(0 0 0 / 0.2)",
     "--button-color": "#333333"
   }
 }

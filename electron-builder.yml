@@ -4,7 +4,7 @@ directories:
   output: './build'
 files:
   - dist/**/*
-  - src/images/**/*
+  - src/shared/assets/**/*
   - '!node_modules/**/*'
 # fileAssociations:
 #   ext:
@@ -27,8 +27,8 @@ mac:
       arch:
         - x64
         - arm64
-  icon: src/images/logos/museeks.icns
-  artifactName: ${name}-${arch}.${ext}
+  icon: src/shared/assets/logos/museeks.icns
+  artifactName: ${name}-macos-${arch}.${ext}
   darkModeSupport: true
 linux:
   category: AudioVideo
@@ -36,17 +36,17 @@ linux:
     - target: deb
       arch:
         - x64
-        - ia32
     - target: AppImage
       arch:
         - x64
-        - ia32
     - target: rpm
       arch:
         - x64
-        - ia32
+    - target: tar.gz
+      arch:
+        - x64
   executableName: museeks
-  artifactName: ${name}-${arch}.${ext}
+  artifactName: ${name}-linux-${arch}.${ext}
 deb:
   depends: ['libdbus-1-dev', 'libglib2.0-dev']
 win:
@@ -54,12 +54,10 @@ win:
     - target: nsis
       arch:
         - x64
-        - ia32
     - target: portable
       arch:
         - x64
-        - ia32
   icon: src/images/logos/museeks.ico
-  artifactName: ${name}-${arch}-setup.${ext}
+  artifactName: ${name}-win-${arch}-setup.${ext}
 portable:
-  artifactName: ${name}-${arch}-portable.${ext}
+  artifactName: ${name}-win-${arch}-portable.${ext}

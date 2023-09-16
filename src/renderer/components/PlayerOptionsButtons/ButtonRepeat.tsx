@@ -1,10 +1,8 @@
-import React from 'react';
 import InlineSVG from 'svg-inline-react';
 import cx from 'classnames';
 
 import * as PlayerActions from '../../store/actions/PlayerActions';
 import { Repeat } from '../../../shared/types/museeks';
-
 import icons from '../../lib/icons';
 
 import styles from './common.module.css';
@@ -16,11 +14,11 @@ const svgMap = {
   default: icons.REPEAT,
 };
 
-interface Props {
+type Props = {
   repeat: Repeat;
-}
+};
 
-const ButtonRepeat: React.FC<Props> = (props) => {
+export default function ButtonRepeat(props: Props) {
   const svg = svgMap[props.repeat] || svgMap.default;
   const buttonClasses = cx(styles.button, {
     [styles.active]: props.repeat === Repeat.ONE || props.repeat === Repeat.ALL,
@@ -51,6 +49,4 @@ const ButtonRepeat: React.FC<Props> = (props) => {
       <InlineSVG src={svg} className={styles.icon} />
     </button>
   );
-};
-
-export default ButtonRepeat;
+}

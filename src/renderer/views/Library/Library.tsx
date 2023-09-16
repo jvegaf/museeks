@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 
@@ -7,11 +7,11 @@ import TracksList from '../../components/TracksList/TracksList';
 import { filterTracks, sortTracks } from '../../lib/utils-library';
 import SORT_ORDERS from '../../constants/sort-orders';
 import { RootState } from '../../store/reducers';
+import appStyles from '../Root.module.css';
 
-import appStyles from '../../App.module.css';
 import styles from './Library.module.css';
 
-const Library: React.FC = () => {
+export default function Library() {
   const library = useSelector((state: RootState) => state.library);
   const player = useSelector((state: RootState) => state.player);
   const playlists = useSelector((state: RootState) => state.playlists.list);
@@ -26,8 +26,6 @@ const Library: React.FC = () => {
   });
 
   const getLibraryComponent = useMemo(() => {
-    const { playerStatus } = player;
-
     const trackPlayingId =
       player.queue.length > 0 && player.queueCursor !== null ? player.queue[player.queueCursor]._id : null;
 
@@ -74,18 +72,8 @@ const Library: React.FC = () => {
     }
 
     // All good !
-    return (
-      <TracksList
-        type='library'
-        playerStatus={playerStatus}
-        tracks={tracks}
-        trackPlayingId={trackPlayingId}
-        playlists={playlists}
-      />
-    );
+    return <TracksList type='library' tracks={tracks} trackPlayingId={trackPlayingId} playlists={playlists} />;
   }, [library, playlists, player, tracks]);
 
   return <div className={`${appStyles.view} ${styles.viewLibrary}`}>{getLibraryComponent}</div>;
-};
-
-export default Library;
+}

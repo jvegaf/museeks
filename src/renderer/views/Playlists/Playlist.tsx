@@ -1,39 +1,35 @@
-import React, { useCallback, useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useSelector } from 'react-redux';
-import { useParams } from 'react-router';
-import { Link } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 
-import TracksList from '../TracksList/TracksList';
+import TracksList from '../../components/TracksList/TracksList';
 import * as ViewMessage from '../../elements/ViewMessage/ViewMessage';
-
 import * as PlaylistsActions from '../../store/actions/PlaylistsActions';
 import { filterTracks } from '../../lib/utils-library';
 import { RootState } from '../../store/reducers';
 
-const Playlist: React.FC = () => {
+export default function Playlist() {
   const params = useParams();
   const playlistId = params.playlistId;
 
-  const { tracks, trackPlayingId, playerStatus, playlists, currentPlaylist, search } = useSelector(
-    (state: RootState) => {
-      const { library, player, playlists } = state;
+  const { tracks, trackPlayingId, playlists, currentPlaylist, search } = useSelector((state: RootState) => {
+    const { library, player, playlists } = state;
 
-      const { search, tracks } = library;
-      const filteredTracks = filterTracks(tracks.playlist, search);
+    const { search, tracks } = library;
+    const filteredTracks = filterTracks(tracks.playlist, search);
 
-      const currentPlaylist = playlists.list.find((p) => p._id === playlistId);
+    const currentPlaylist = playlists.list.find((p) => p._id === playlistId);
 
-      return {
-        playlists: playlists.list,
-        currentPlaylist,
-        tracks: filteredTracks,
-        playerStatus: player.playerStatus,
-        trackPlayingId:
-          player.queue.length > 0 && player.queueCursor !== null ? player.queue[player.queueCursor]._id : null,
-        search: library.search,
-      };
-    }
-  );
+    return {
+      playlists: playlists.list,
+      currentPlaylist,
+      tracks: filteredTracks,
+      playerStatus: player.playerStatus,
+      trackPlayingId:
+        player.queue.length > 0 && player.queueCursor !== null ? player.queue[player.queueCursor]._id : null,
+      search: library.search,
+    };
+  });
 
   useEffect(() => {
     if (playlistId) {
@@ -99,13 +95,10 @@ const Playlist: React.FC = () => {
       type='playlist'
       reorderable={true}
       onReorder={onReorder}
-      playerStatus={playerStatus}
       tracks={tracks}
       trackPlayingId={trackPlayingId}
       playlists={playlists}
       currentPlaylist={playlistId}
     />
   );
-};
-
-export default Playlist;
+}

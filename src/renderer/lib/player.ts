@@ -1,7 +1,4 @@
-import { Track } from '../../shared/types/museeks';
-import * as utils from '../lib/utils';
-
-import * as app from './app';
+import { TrackModel } from '../../shared/types/museeks';
 
 interface PlayerOptions {
   playbackRate?: number;
@@ -12,11 +9,16 @@ interface PlayerOptions {
 
 /**
  * Library in charge of playing audio. Currently uses HTMLAudioElement.
+ *
+ * Open questions:
+ *   - Should it emit IPC events itself? Or expose events?
+ *   - Should it hold the concepts of queue/random/etc? (in other words, should
+ *     we merge PlayerActions here?)
  */
-class Player {
+export default class Player {
   private audio: HTMLAudioElement;
   private durationThresholdReached: boolean;
-  private track: Track | null;
+  private track: TrackModel | null;
   public threshold: number;
 
   constructor(options?: PlayerOptions) {
@@ -96,9 +98,9 @@ class Player {
     return this.track;
   }
 
-  setTrack(track: Track) {
+  setTrack(track: TrackModel) {
     this.track = track;
-    this.audio.src = utils.parseUri(track.path);
+    this.audio.src = window.MuseeksAPI.library.parseUri(track.path);
 
     // When we change song, need to update the thresholdReached indicator.
     this.durationThresholdReached = false;
@@ -124,10 +126,3 @@ class Player {
     return this.durationThresholdReached;
   }
 }
-
-export default new Player({
-  volume: app.config.get('audioVolume'),
-  playbackRate: app.config.get('audioPlaybackRate'),
-  audioOutputDevice: app.config.get('audioOutputDevice'),
-  muted: app.config.get('audioMuted'),
-});

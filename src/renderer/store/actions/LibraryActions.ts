@@ -1,27 +1,25 @@
-import * as fs from 'fs';
-import path from 'path';
-import electron, { ipcRenderer } from 'electron';
-import queue from 'queue';
+import type electron from 'electron';
+import { ipcRenderer } from 'electron';
+import { chunk, flatten } from 'lodash-es';
 
 import store from '../store';
 import types from '../action-types';
-
-import * as app from '../../lib/app';
-import * as utils from '../../lib/utils';
-import * as m3u from '../../lib/utils-m3u';
-import { TrackEditableFields, SortBy, TrackModel } from '../../../shared/types/museeks';
+import { TrackEditableFields, SortBy, TrackModel, Track } from '../../../shared/types/museeks';
 import channels from '../../../shared/lib/ipc-channels';
-
 import logger from '../../../shared/lib/logger';
+import { getLoweredMeta } from '../../../shared/lib/utils-id3';
+
 import * as PlaylistsActions from './PlaylistsActions';
 import * as ToastsActions from './ToastsActions';
+
+const { path, db } = window.MuseeksAPI;
 
 /**
  * Load tracks from database
  */
 export const refresh = async (): Promise<void> => {
   try {
-    const tracks = await app.db.Track.find().execAsync();
+    const tracks = await db.tracks.getAll();
 
     store.dispatch({
       type: types.LIBRARY_REFRESH,
@@ -62,12 +60,10 @@ const scanPlaylists = async (paths: string[]) => {
   return Promise.all(
     paths.map(async (filePath) => {
       try {
-        const playlistFiles = m3u.parse(filePath);
+        const playlistFiles = await window.MuseeksAPI.playlists.resolveM3u(filePath);
         const playlistName = path.parse(filePath).name;
 
-        const existingTracks: TrackModel[] = await app.db.Track.findAsync({
-          $or: playlistFiles.map((filePath) => ({ path: filePath })),
-        });
+        const existingTracks: TrackModel[] = await db.tracks.findByPath(playlistFiles);
 
         await PlaylistsActions.create(
           playlistName,
@@ -79,91 +75,6 @@ const scanPlaylists = async (paths: string[]) => {
       }
     })
   );
-};
-
-const scan = {
-  processed: 0,
-  total: 0,
-};
-
-const scanTracks = async (paths: string[]): Promise<TrackModel[]> => {
-  return new Promise((resolve, reject) => {
-    if (paths.length === 0) resolve([]);
-
-    try {
-      // Instantiate queue
-      let scannedFiles: TrackModel[] = [];
-
-      // eslint-disable-next-line
-      // @ts-ignore Outdated types
-      // https://github.com/jessetane/queue/pull/15#issuecomment-414091539
-      const scanQueue = queue();
-      scanQueue.concurrency = 32;
-      scanQueue.autostart = true;
-
-      scanQueue.on('end', async () => {
-        scan.processed = 0;
-        scan.total = 0;
-
-        resolve(scannedFiles);
-      });
-
-      scanQueue.on('success', () => {
-        // Every 100 scans, update progress bar
-        if (scan.processed % 100 === 0) {
-          // Progress bar update
-          store.dispatch({
-            type: types.LIBRARY_REFRESH_PROGRESS,
-            payload: {
-              processed: scan.processed,
-              total: scan.total,
-            },
-          });
-
-          // Add tracks to the library view
-          const tracks = [...scannedFiles];
-          scannedFiles = []; // Reset current selection
-          store.dispatch({
-            type: types.LIBRARY_ADD_TRACKS,
-            payload: {
-              tracks,
-            },
-          });
-        }
-      });
-      // End queue instantiation
-
-      scan.total += paths.length;
-
-      paths.forEach((filePath) => {
-        scanQueue.push(async (callback) => {
-          try {
-            // Normalize (back)slashes on Windows
-            filePath = path.resolve(filePath);
-
-            // Check if there is an existing record in the DB
-            const existingDoc = await app.db.Track.findOneAsync({ path: filePath });
-
-            // If there is existing document
-            if (!existingDoc) {
-              // Get metadata
-              const track = await utils.getMetadata(filePath);
-              const insertedDoc: TrackModel = await app.db.Track.insertAsync(track);
-              scannedFiles.push(insertedDoc);
-            }
-
-            scan.processed++;
-          } catch (err) {
-            logger.warn(err);
-          }
-
-          if (callback) callback();
-        });
-      });
-    } catch (err) {
-      reject(err);
-    }
-  });
 };
 
 /**
@@ -190,8 +101,46 @@ export const add = async (pathsToScan: string[]): Promise<TrackModel[]> => {
       return [];
     }
 
-    // 5. Scan tracks then scan playlists
-    const importedTracks = await scanTracks(supportedTrackFiles);
+    // 5. Import the music tracks found the directories
+    const tracks: Track[] = await ipcRenderer.invoke(channels.LIBRARY_IMPORT_TRACKS, supportedTrackFiles);
+
+    const batchSize = 100;
+    const chunkedTracks = chunk(tracks, batchSize);
+    let processed = 0;
+
+    const chunkedImportedTracks = await Promise.all(
+      chunkedTracks.map(async (chunk) => {
+        // First, let's see if some of those files are already inserted
+        const insertedChunk = await db.tracks.insertMultiple(chunk);
+
+        processed += batchSize;
+
+        // Progress bar update
+        store.dispatch({
+          type: types.LIBRARY_REFRESH_PROGRESS,
+          payload: {
+            processed,
+            total: tracks.length,
+          },
+        });
+
+        // Add tracks to the library view
+        store.dispatch({
+          type: types.LIBRARY_ADD_TRACKS,
+          payload: {
+            tracks: insertedChunk,
+          },
+        });
+
+        return insertedChunk;
+      })
+    );
+
+    const importedTracks = flatten(chunkedImportedTracks);
+
+    // TODO: do not re-import existing tracks
+
+    // Import playlists found in the directories
     await scanPlaylists(supportedPlaylistsFiles);
 
     await refresh();
@@ -226,7 +175,7 @@ export const remove = async (tracksIds: string[]): Promise<void> => {
   if (result.response === 1) {
     // button possition, here 'remove'
     // Remove tracks from the Track collection
-    app.db.Track.removeAsync({ _id: { $in: tracksIds } }, { multi: true });
+    await db.tracks.remove(tracksIds);
 
     store.dispatch({
       type: types.LIBRARY_REMOVE_TRACKS,
@@ -259,8 +208,7 @@ export const reset = async (): Promise<void> => {
         type: types.LIBRARY_REFRESH_START,
       });
 
-      await app.db.Track.removeAsync({}, { multi: true });
-      await app.db.Playlist.removeAsync({}, { multi: true });
+      await db.reset();
 
       store.dispatch({
         type: types.LIBRARY_RESET,
@@ -280,11 +228,9 @@ export const reset = async (): Promise<void> => {
 /**
  * Update the play count attribute.
  */
-export const incrementPlayCount = async (source: string): Promise<void> => {
-  const query = { src: source }; // HACK Not great, should be done with an _id
-  const update = { $inc: { playcount: 1 } };
+export const incrementPlayCount = async (trackID: string): Promise<void> => {
   try {
-    await app.db.Track.updateAsync(query, update);
+    await db.tracks.updateWithRawQuery(trackID, { $inc: { playcount: 1 } });
   } catch (err) {
     logger.warn(err);
   }
@@ -299,21 +245,19 @@ export const incrementPlayCount = async (source: string): Promise<void> => {
  * @param newFields The fields to be updated and their new value
  */
 export const updateTrackMetadata = async (trackId: string, newFields: TrackEditableFields): Promise<void> => {
-  const query = { _id: trackId };
-
-  let track: TrackModel = await app.db.Track.findOneAsync(query);
+  let track = await db.tracks.findOnlyByID(trackId);
 
   track = {
     ...track,
     ...newFields,
-    loweredMetas: utils.getLoweredMeta(newFields),
+    loweredMetas: getLoweredMeta(newFields),
   };
 
   if (!track) {
     throw new Error('No track found while trying to update track metadata');
   }
 
-  await app.db.Track.updateAsync(query, track);
+  await db.tracks.update(trackId, track);
 
   await refresh();
 };
