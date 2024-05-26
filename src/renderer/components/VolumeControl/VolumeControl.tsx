@@ -1,10 +1,12 @@
 import React, { useCallback, useState } from 'react';
 import Icon from 'react-fontawesome';
 import cx from 'classnames';
-import Slider from 'react-rangeslider';
+import * as Slider from '@radix-ui/react-slider';
 
-import * as PlayerActions from '../../store/actions/PlayerActions';
 import controlStyles from '../PlayerControls/PlayerControls.module.css';
+import { usePlayerAPI } from '../../stores/usePlayerStore';
+import player from '../../lib/player';
+import { stopPropagation } from '../../lib/utils-events';
 
 import styles from './VolumeControl.module.css';
 
@@ -12,7 +14,8 @@ import styles from './VolumeControl.module.css';
 const SMOOTHING_FACTOR = 2.5;
 
 const smoothifyVolume = (value: number): number => value ** SMOOTHING_FACTOR;
-const unsmoothifyVolume = (value: number): number => value ** (1 / SMOOTHING_FACTOR);
+const unsmoothifyVolume = (value: number): number =>
+  value ** (1 / SMOOTHING_FACTOR);
 
 const getVolumeIcon = (volume: number, muted: boolean): string => {
   if (muted || volume === 0) return 'volume-off';
@@ -21,30 +24,40 @@ const getVolumeIcon = (volume: number, muted: boolean): string => {
 };
 
 export default function VolumeControl() {
-  const audio = window.MuseeksAPI.player.getAudio();
+  const audio = player.getAudio();
 
   const [showVolume, setShowVolume] = useState(false);
   const [volume, setVolume] = useState(audio.volume);
   const [muted, setMuted] = useState(audio.muted);
 
+  const playerAPI = usePlayerAPI();
+
   const setPlayerVolume = useCallback(
-    (value: number) => {
+    (values: number[]) => {
+      const [value] = values;
       const smoothVolume = smoothifyVolume(value);
 
-      PlayerActions.setVolume(smoothVolume);
+      playerAPI.setVolume(smoothVolume);
       setVolume(smoothVolume);
     },
-    [setVolume]
+    [setVolume, playerAPI],
   );
 
-  const mute = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
-    if (e.currentTarget.classList.contains(controlStyles.control) || e.currentTarget.classList.contains('fa')) {
-      const muted = !window.MuseeksAPI.player.isMuted();
+  // TODO: move to player actions
+  const mute = useCallback(
+    (e: React.MouseEvent<HTMLButtonElement>) => {
+      if (
+        e.currentTarget.classList.contains(controlStyles.control) ||
+        e.currentTarget.classList.contains('fa')
+      ) {
+        const muted = !player.isMuted();
 
-      PlayerActions.setMuted(muted);
-      setMuted(muted);
-    }
-  }, []);
+        playerAPI.setMuted(muted);
+        setMuted(muted);
+      }
+    },
+    [playerAPI],
+  );
 
   const volumeClasses = cx(styles.volumeControl, {
     [styles.visible]: showVolume,
@@ -56,18 +69,29 @@ export default function VolumeControl() {
       onMouseEnter={() => setShowVolume(true)}
       onMouseLeave={() => setShowVolume(false)}
     >
-      <button type='button' className={controlStyles.control} title='Volume' onClick={mute}>
+      <button
+        type="button"
+        className={controlStyles.control}
+        title="Volume"
+        onClick={mute}
+      >
         <Icon name={getVolumeIcon(unsmoothifyVolume(volume), muted)} />
       </button>
       <div className={volumeClasses}>
-        <Slider
+        <Slider.Root
+          className={styles.sliderRoot}
+          value={[unsmoothifyVolume(volume)]}
+          onKeyDown={stopPropagation}
+          onValueChange={setPlayerVolume}
           min={0}
           max={1}
           step={0.01}
-          tooltip={false}
-          value={unsmoothifyVolume(volume)}
-          onChange={setPlayerVolume}
-        />
+        >
+          <Slider.Track className={styles.sliderTrack}>
+            <Slider.Range className={styles.sliderRange} />
+          </Slider.Track>
+          <Slider.Thumb className={styles.sliderThumb} aria-label="Volume" />
+        </Slider.Root>
       </div>
     </div>
   );

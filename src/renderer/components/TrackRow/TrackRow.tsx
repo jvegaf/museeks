@@ -13,24 +13,44 @@ type Props = {
   track: TrackModel;
   index: number;
   isPlaying: boolean;
-  onDoubleClick: (trackId: string) => void;
-  onMouseDown: (event: React.MouseEvent, trackId: string, index: number) => void;
+  onDoubleClick: (trackID: string) => void;
+  onMouseDown: (
+    event: React.MouseEvent,
+    trackID: string,
+    index: number,
+  ) => void;
   onContextMenu: (event: React.MouseEvent, index: number) => void;
-  onClick: (event: React.MouseEvent | React.KeyboardEvent, trackId: string) => void;
+  onClick: (
+    event: React.MouseEvent | React.KeyboardEvent,
+    trackID: string,
+  ) => void;
 
   draggable?: boolean;
   reordered?: boolean;
   onDragStart?: () => void;
-  onDragOver?: (trackId: string, position: 'above' | 'below') => void;
+  onDragOver?: (trackID: string, position: 'above' | 'below') => void;
   onDragEnd?: () => void;
-  onDrop?: (targetTrackId: string, position: 'above' | 'below') => void;
+  onDrop?: (targetTrackID: string, position: 'above' | 'below') => void;
+  style?: React.CSSProperties;
 };
 
 export default function TrackRow(props: Props) {
   const [reorderOver, setReorderOver] = useState(false);
-  const [reorderPosition, setReorderPosition] = useState<'above' | 'below' | null>(null);
+  const [reorderPosition, setReorderPosition] = useState<
+    'above' | 'below' | null
+  >(null);
 
-  const { track, index, selected, draggable, reordered, onMouseDown, onClick, onContextMenu, onDoubleClick } = props;
+  const {
+    track,
+    index,
+    selected,
+    draggable,
+    reordered,
+    onMouseDown,
+    onClick,
+    onContextMenu,
+    onDoubleClick,
+  } = props;
 
   // TODO: migrate to react-dnd
   const onDragStart = useCallback(
@@ -43,13 +63,14 @@ export default function TrackRow(props: Props) {
         props.onDragStart();
       }
     },
-    [props]
+    [props],
   );
 
   const onDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
 
-    const relativePosition = event.nativeEvent.offsetY / event.currentTarget.offsetHeight;
+    const relativePosition =
+      event.nativeEvent.offsetY / event.currentTarget.offsetHeight;
     const dragPosition = relativePosition < 0.5 ? 'above' : 'below';
 
     setReorderOver(true);
@@ -73,7 +94,6 @@ export default function TrackRow(props: Props) {
   }, [props, reorderPosition]);
 
   const trackClasses = cx(styles.track, {
-    [styles.trackOdd]: index % 2 === 1,
     [styles.selected]: selected,
     [styles.reordered]: reordered,
     [styles.isReorderedOver]: reorderOver,
@@ -93,7 +113,7 @@ export default function TrackRow(props: Props) {
         }
       }}
       onContextMenu={(e) => onContextMenu(e, index)}
-      role='option'
+      role="option"
       aria-selected={selected}
       tabIndex={-1} // we do not want trackrows to be focusable by the keyboard
       draggable={draggable}
@@ -102,16 +122,27 @@ export default function TrackRow(props: Props) {
       onDragLeave={(draggable && onDragLeave) || undefined}
       onDrop={(draggable && onDrop) || undefined}
       onDragEnd={(draggable && props.onDragEnd) || undefined}
+      style={props.style}
       {...(props.isPlaying ? { 'data-is-playing': true } : {})}
     >
       <div className={`${styles.cell} ${cellStyles.cellTrackPlaying}`}>
         {props.isPlaying ? <PlayingIndicator /> : null}
       </div>
-      <div className={`${styles.cell} ${cellStyles.cellTrack}`}>{track.title}</div>
-      <div className={`${styles.cell} ${cellStyles.cellDuration}`}>{parseDuration(track.duration)}</div>
-      <div className={`${styles.cell} ${cellStyles.cellArtist}`}>{track.artist.sort().join(', ')}</div>
-      <div className={`${styles.cell} ${cellStyles.cellAlbum}`}>{track.album}</div>
-      <div className={`${styles.cell} ${cellStyles.cellGenre}`}>{track.genre.join(', ')}</div>
+      <div className={`${styles.cell} ${cellStyles.cellTrack}`}>
+        {track.title}
+      </div>
+      <div className={`${styles.cell} ${cellStyles.cellDuration}`}>
+        {parseDuration(track.duration)}
+      </div>
+      <div className={`${styles.cell} ${cellStyles.cellArtist}`}>
+        {track.artist.sort().join(', ')}
+      </div>
+      <div className={`${styles.cell} ${cellStyles.cellAlbum}`}>
+        {track.album}
+      </div>
+      <div className={`${styles.cell} ${cellStyles.cellGenre}`}>
+        {track.genre.join(', ')}
+      </div>
     </div>
   );
 }

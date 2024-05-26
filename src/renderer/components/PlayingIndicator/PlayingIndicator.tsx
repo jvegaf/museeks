@@ -1,17 +1,15 @@
 import { useState } from 'react';
 import Icon from 'react-fontawesome';
-import { useSelector } from 'react-redux';
 
-import * as PlayerActions from '../../store/actions/PlayerActions';
 import { PlayerStatus } from '../../../shared/types/museeks';
-import { RootState } from '../../store/reducers';
+import usePlayerStore, { usePlayerAPI } from '../../stores/usePlayerStore';
 
 import styles from './PlayingIndicator.module.css';
 
 const getIcon = (state: PlayerStatus, hovered: boolean) => {
   if (state === PlayerStatus.PLAY) {
     if (hovered) {
-      return <Icon name='pause' fixedWidth />;
+      return <Icon name="pause" fixedWidth />;
     }
 
     return (
@@ -23,19 +21,20 @@ const getIcon = (state: PlayerStatus, hovered: boolean) => {
     );
   }
 
-  return <Icon name='play' fixedWidth />;
+  return <Icon name="play" fixedWidth />;
 };
 
 export default function TrackPlayingIndicator() {
   const [hovered, setHovered] = useState(false);
-  const playerStatus = useSelector((state: RootState) => state.player.playerStatus);
+  const playerStatus = usePlayerStore((state) => state.playerStatus);
+  const playerAPI = usePlayerAPI();
 
   const icon = getIcon(playerStatus, hovered);
 
   return (
     <button
       className={`${styles.playingIndicator} reset`}
-      onClick={PlayerActions.playPause}
+      onClick={playerAPI.playPause}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       tabIndex={0}

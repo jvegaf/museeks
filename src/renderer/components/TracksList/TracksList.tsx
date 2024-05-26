@@ -1,26 +1,32 @@
 import type { MenuItemConstructorOptions } from 'electron';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import KeyBinding from 'react-keybinding-component';
-import { useSelector } from 'react-redux';
+import Keybinding from 'react-keybinding-component';
 import { useNavigate } from 'react-router-dom';
-import { Virtuoso, VirtuosoHandle } from 'react-virtuoso';
+import { useVirtualizer } from '@tanstack/react-virtual';
 
 import TrackRow from '../TrackRow/TrackRow';
 import TracksListHeader from '../TracksListHeader/TracksListHeader';
-import * as LibraryActions from '../../store/actions/LibraryActions';
-import * as PlaylistsActions from '../../store/actions/PlaylistsActions';
-import * as PlayerActions from '../../store/actions/PlayerActions';
-import * as QueueActions from '../../store/actions/QueueActions';
-import { isLeftClick, isRightClick, isCtrlKey, isAltKey } from '../../lib/utils-events';
-import { PlaylistModel, TrackModel } from '../../../shared/types/museeks';
-import { RootState } from '../../store/reducers';
-import headerStyles from '../Header/Header.module.css';
+import PlaylistsAPI from '../../stores/PlaylistsAPI';
+import {
+  isLeftClick,
+  isRightClick,
+  isCtrlKey,
+  isAltKey,
+} from '../../lib/utils-events';
+import {
+  Config,
+  PlaylistModel,
+  TrackModel,
+} from '../../../shared/types/museeks';
+import { usePlayerAPI } from '../../stores/usePlayerStore';
+import useLibraryStore, { useLibraryAPI } from '../../stores/useLibraryStore';
 
 import styles from './TracksList.module.css';
 
-const { Menu } = window.MuseeksAPI.remote;
+const { menu } = window.ElectronAPI;
 
-const ROW_HEIGHT = 30; // FIXME (make that dynamic or rem?)
+const ROW_HEIGHT = 30;
+const ROW_HEIGHT_COMPACT = 24;
 
 // --------------------------------------------------------------------------
 // TrackList
@@ -29,58 +35,94 @@ const ROW_HEIGHT = 30; // FIXME (make that dynamic or rem?)
 type Props = {
   type: string;
   tracks: TrackModel[];
-  trackPlayingId: string | null;
+  tracksDensity: Config['tracksDensity'];
+  trackPlayingID: string | null;
   playlists: PlaylistModel[];
   currentPlaylist?: string;
   reorderable?: boolean;
-  onReorder?: (playlistId: string, tracksIds: string[], targetTrackId: string, position: 'above' | 'below') => void;
+  onReorder?: (
+    playlistID: string,
+    tracksIDs: string[],
+    targetTrackID: string,
+    position: 'above' | 'below',
+  ) => void;
 };
 
 export default function TracksList(props: Props) {
-  const { tracks, type, trackPlayingId, reorderable, currentPlaylist, onReorder, playlists } = props;
+  const {
+    tracks,
+    type,
+    tracksDensity,
+    trackPlayingID,
+    reorderable,
+    currentPlaylist,
+    onReorder,
+    playlists,
+  } = props;
 
   const [selected, setSelected] = useState<string[]>([]);
   const [reordered, setReordered] = useState<string[] | null>([]);
-  const virtuosoRef = useRef<VirtuosoHandle>(null);
   const navigate = useNavigate();
 
-  const highlight = useSelector<RootState, boolean>((state) => state.library.highlightPlayingTrack);
+  // Scrollable element for the virtual list + virtualizer
+  const scrollableRef = useRef<HTMLDivElement>(null);
+  const virtualizer = useVirtualizer({
+    count: tracks.length,
+    overscan: 10,
+    getScrollElement: () => scrollableRef.current,
+    estimateSize: () => {
+      switch (tracksDensity) {
+        case 'compact':
+          return ROW_HEIGHT_COMPACT;
+        case 'normal':
+        default:
+          return ROW_HEIGHT;
+      }
+    },
+    getItemKey: (index) => tracks[index]._id,
+  });
+
+  const playerAPI = usePlayerAPI();
+  const libraryAPI = useLibraryAPI();
+  const highlight = useLibraryStore((state) => state.highlightPlayingTrack);
 
   // Highlight playing track and scroll to it
   // Super-mega-hacky to use Redux for that
   useEffect(() => {
-    if (highlight === true && trackPlayingId && virtuosoRef.current) {
-      setSelected([trackPlayingId]);
+    if (highlight === true && trackPlayingID) {
+      setSelected([trackPlayingID]);
 
-      const playingTrackIndex = tracks.findIndex((track) => track._id === trackPlayingId);
+      const playingTrackIndex = tracks.findIndex(
+        (track) => track._id === trackPlayingID,
+      );
 
       if (playingTrackIndex >= 0) {
-        virtuosoRef.current.scrollToIndex({
-          index: playingTrackIndex,
-        });
+        virtualizer.scrollToIndex(playingTrackIndex, { behavior: 'smooth' });
       }
 
-      LibraryActions.highlightPlayingTrack(false);
+      libraryAPI.highlightPlayingTrack(false);
     }
-  }, [highlight, trackPlayingId, tracks]);
+  }, [highlight, trackPlayingID, tracks, libraryAPI, virtualizer]);
 
   /**
    * Helpers
    */
-
   const startPlayback = useCallback(
-    async (_id: string) => {
-      PlayerActions.start(tracks, _id);
+    async (trackID: string) => {
+      playerAPI.start(tracks, trackID);
     },
-    [tracks]
+    [tracks, playerAPI],
   );
 
   /**
    * Keyboard navigations events/helpers
    */
-  const onEnter = useCallback(async (index: number, tracks: TrackModel[]) => {
-    if (index !== -1) PlayerActions.start(tracks, tracks[index]._id);
-  }, []);
+  const onEnter = useCallback(
+    async (index: number, tracks: TrackModel[]) => {
+      if (index !== -1) playerAPI.start(tracks, tracks[index]._id);
+    },
+    [playerAPI],
+  );
 
   const onControlAll = useCallback((tracks: TrackModel[]) => {
     setSelected(tracks.map((track) => track._id));
@@ -97,12 +139,9 @@ export default function TracksList(props: Props) {
       else newSelected = [tracks[addedIndex]._id];
 
       setSelected(newSelected);
-
-      if (virtuosoRef.current) {
-        virtuosoRef.current.scrollIntoView({ index: addedIndex });
-      }
+      virtualizer.scrollToIndex(addedIndex);
     },
-    [selected]
+    [selected, virtualizer],
   );
 
   const onDown = useCallback(
@@ -115,17 +154,16 @@ export default function TracksList(props: Props) {
       else newSelected = [tracks[addedIndex]._id];
 
       setSelected(newSelected);
-
-      if (virtuosoRef.current) {
-        virtuosoRef.current.scrollIntoView({ index: addedIndex });
-      }
+      virtualizer.scrollToIndex(addedIndex);
     },
-    [selected]
+    [selected, virtualizer],
   );
 
   const onKey = useCallback(
     async (e: KeyboardEvent) => {
-      let firstSelectedTrackId = tracks.findIndex((track) => selected.includes(track._id));
+      let firstSelectedTrackID = tracks.findIndex((track) =>
+        selected.includes(track._id),
+      );
 
       switch (e.code) {
         case 'KeyA':
@@ -137,26 +175,28 @@ export default function TracksList(props: Props) {
 
         case 'ArrowUp':
           e.preventDefault();
-          onUp(firstSelectedTrackId, tracks, e.shiftKey);
+          onUp(firstSelectedTrackID, tracks, e.shiftKey);
           break;
 
         case 'ArrowDown':
           // This effectively becomes lastSelectedTrackID
-          firstSelectedTrackId = tracks.findIndex((track) => selected[selected.length - 1] === track._id);
+          firstSelectedTrackID = tracks.findIndex(
+            (track) => selected[selected.length - 1] === track._id,
+          );
           e.preventDefault();
-          onDown(firstSelectedTrackId, tracks, e.shiftKey);
+          onDown(firstSelectedTrackID, tracks, e.shiftKey);
           break;
 
         case 'Enter':
           e.preventDefault();
-          await onEnter(firstSelectedTrackId, tracks);
+          await onEnter(firstSelectedTrackID, tracks);
           break;
 
         default:
           break;
       }
     },
-    [onControlAll, onDown, onUp, onEnter, selected, tracks]
+    [onControlAll, onDown, onUp, onEnter, selected, tracks],
   );
 
   /**
@@ -166,29 +206,32 @@ export default function TracksList(props: Props) {
   const onReorderEnd = useCallback(() => setReordered(null), []);
 
   const onDrop = useCallback(
-    async (targetTrackId: string, position: 'above' | 'below') => {
+    async (targetTrackID: string, position: 'above' | 'below') => {
       if (onReorder && currentPlaylist && reordered) {
-        onReorder(currentPlaylist, reordered, targetTrackId, position);
+        onReorder(currentPlaylist, reordered, targetTrackID, position);
       }
     },
-    [currentPlaylist, onReorder, reordered]
+    [currentPlaylist, onReorder, reordered],
   );
 
   /**
    * Tracks selection
    */
-  const isSelectableTrack = useCallback((id: string) => !selected.includes(id), [selected]);
+  const isSelectableTrack = useCallback(
+    (id: string) => !selected.includes(id),
+    [selected],
+  );
 
   const sortSelected = useCallback(
     (a: string, b: string): number => {
-      const allTracksIds = tracks.map((track) => track._id);
+      const allTracksIDs = tracks.map((track) => track._id);
 
-      return allTracksIds.indexOf(a) - allTracksIds.indexOf(b);
+      return allTracksIDs.indexOf(a) - allTracksIDs.indexOf(b);
     },
-    [tracks]
+    [tracks],
   );
 
-  const toggleSelectionById = useCallback(
+  const toggleSelectionByID = useCallback(
     (id: string) => {
       let newSelected = [...selected];
 
@@ -203,7 +246,7 @@ export default function TracksList(props: Props) {
       newSelected = newSelected.sort(sortSelected);
       setSelected(newSelected);
     },
-    [selected, sortSelected]
+    [selected, sortSelected],
   );
 
   const multiSelect = useCallback(
@@ -241,45 +284,58 @@ export default function TracksList(props: Props) {
 
       setSelected(newSelected.sort(sortSelected));
     },
-    [selected, sortSelected, tracks]
+    [selected, sortSelected, tracks],
   );
 
   const selectTrack = useCallback(
-    (event: React.MouseEvent, trackId: string, index: number) => {
+    (event: React.MouseEvent, trackID: string, index: number) => {
       // To allow selection drag-and-drop, we need to prevent track selection
       // when selection a track that is already selected
-      if (selected.includes(trackId) && !event.metaKey && !event.ctrlKey && !event.shiftKey) {
+      if (
+        selected.includes(trackID) &&
+        !event.metaKey &&
+        !event.ctrlKey &&
+        !event.shiftKey
+      ) {
         return;
       }
 
-      if (isLeftClick(event) || (isRightClick(event) && isSelectableTrack(trackId))) {
+      if (
+        isLeftClick(event) ||
+        (isRightClick(event) && isSelectableTrack(trackID))
+      ) {
         if (isCtrlKey(event)) {
-          toggleSelectionById(trackId);
+          toggleSelectionByID(trackID);
         } else if (event.shiftKey) {
           if (selected.length === 0) {
-            const newSelected = [trackId];
+            const newSelected = [trackID];
             setSelected(newSelected);
           } else {
             multiSelect(index);
           }
         } else {
           if (!isAltKey(event)) {
-            const newSelected = [trackId];
+            const newSelected = [trackID];
             setSelected(newSelected);
           }
         }
       }
     },
-    [selected, multiSelect, toggleSelectionById, isSelectableTrack]
+    [selected, multiSelect, toggleSelectionByID, isSelectableTrack],
   );
 
   const selectTrackClick = useCallback(
-    (event: React.MouseEvent | React.KeyboardEvent, trackId: string) => {
-      if (!event.metaKey && !event.ctrlKey && !event.shiftKey && selected.includes(trackId)) {
-        setSelected([trackId]);
+    (event: React.MouseEvent | React.KeyboardEvent, trackID: string) => {
+      if (
+        !event.metaKey &&
+        !event.ctrlKey &&
+        !event.shiftKey &&
+        selected.includes(trackID)
+      ) {
+        setSelected([trackID]);
       }
     },
-    [selected]
+    [selected],
   );
 
   /**
@@ -293,7 +349,9 @@ export default function TracksList(props: Props) {
 
       // Hide current playlist if needed
       if (type === 'playlist') {
-        shownPlaylists = playlists.filter((elem) => elem._id !== currentPlaylist);
+        shownPlaylists = playlists.filter(
+          (elem) => elem._id !== currentPlaylist,
+        );
       }
 
       const playlistTemplate: MenuItemConstructorOptions[] = [];
@@ -304,12 +362,12 @@ export default function TracksList(props: Props) {
           {
             label: 'Create new playlist...',
             click: async () => {
-              await PlaylistsActions.create('New playlist', selected);
+              await PlaylistsAPI.create('New playlist', selected);
             },
           },
           {
             type: 'separator',
-          }
+          },
         );
 
         if (shownPlaylists.length === 0) {
@@ -322,7 +380,7 @@ export default function TracksList(props: Props) {
             playlistTemplate.push({
               label: playlist.name,
               click: async () => {
-                await PlaylistsActions.addTracks(playlist._id, selected);
+                await PlaylistsAPI.addTracks(playlist._id, selected);
               },
             });
           });
@@ -333,13 +391,13 @@ export default function TracksList(props: Props) {
         {
           label: 'Add to queue',
           click: async () => {
-            await QueueActions.addAfter(selected);
+            playerAPI.addInQueue(selected);
           },
         },
         {
           label: 'Play next',
           click: async () => {
-            await QueueActions.addNext(selected);
+            playerAPI.addNextInQueue(selected);
           },
         },
         {
@@ -349,7 +407,10 @@ export default function TracksList(props: Props) {
 
       const template: MenuItemConstructorOptions[] = [
         {
-          label: selectedCount > 1 ? `${selectedCount} tracks selected` : `${selectedCount} track selected`,
+          label:
+            selectedCount > 1
+              ? `${selectedCount} tracks selected`
+              : `${selectedCount} track selected`,
           enabled: false,
         },
         {
@@ -369,15 +430,7 @@ export default function TracksList(props: Props) {
         template.push({
           label: `Search for "${artist}" `,
           click: () => {
-            // HACK
-            const searchInput: HTMLInputElement | null = document.querySelector(
-              `input[type="text"].${headerStyles.header__search__input}`
-            );
-
-            if (searchInput) {
-              searchInput.value = track.artist[0];
-              searchInput.dispatchEvent(new Event('input', { bubbles: true }));
-            }
+            libraryAPI.search(track.artist[0]);
           },
         });
       }
@@ -385,15 +438,7 @@ export default function TracksList(props: Props) {
       template.push({
         label: `Search for "${track.album}"`,
         click: () => {
-          // HACK
-          const searchInput: HTMLInputElement | null = document.querySelector(
-            `input[type="text"].${headerStyles.header__search__input}`
-          );
-
-          if (searchInput) {
-            searchInput.value = track.album;
-            searchInput.dispatchEvent(new Event('input', { bubbles: true }));
-          }
+          libraryAPI.search(track.album);
         },
       });
 
@@ -405,9 +450,9 @@ export default function TracksList(props: Props) {
           {
             label: 'Remove from playlist',
             click: async () => {
-              await PlaylistsActions.removeTracks(currentPlaylist, selected);
+              await PlaylistsAPI.removeTracks(currentPlaylist, selected);
             },
-          }
+          },
         );
       }
 
@@ -433,48 +478,74 @@ export default function TracksList(props: Props) {
         {
           label: 'Remove from library',
           click: () => {
-            LibraryActions.remove(selected);
+            libraryAPI.remove(selected);
           },
-        }
+        },
       );
 
-      const context = Menu.buildFromTemplate(template);
-
-      context.popup({}); // Let it appear
+      menu.showContextMenu(template);
     },
-    [currentPlaylist, playlists, selected, tracks, type, navigate]
+    [
+      currentPlaylist,
+      playlists,
+      selected,
+      tracks,
+      type,
+      navigate,
+      playerAPI,
+      libraryAPI,
+    ],
   );
 
   return (
     <div className={styles.tracksList}>
-      <KeyBinding onKey={onKey} preventInputConflict />
+      <Keybinding onKey={onKey} preventInputConflict />
       <TracksListHeader enableSort={type === 'library'} />
-      <Virtuoso
-        ref={virtuosoRef}
-        data={tracks}
-        totalCount={tracks.length}
-        fixedItemHeight={ROW_HEIGHT}
-        className={styles.tracksListBody}
-        itemContent={(index, track) => {
-          return (
-            <TrackRow
-              selected={selected.includes(track._id)}
-              track={tracks[index]}
-              isPlaying={trackPlayingId === track._id}
-              index={index}
-              onMouseDown={selectTrack}
-              onClick={selectTrackClick}
-              onContextMenu={showContextMenu}
-              onDoubleClick={startPlayback}
-              draggable={reorderable}
-              reordered={(reordered && reordered.includes(track._id)) || false}
-              onDragStart={onReorderStart}
-              onDragEnd={onReorderEnd}
-              onDrop={onDrop}
-            />
-          );
-        }}
-      />
+      {/* Scrollable element */}
+      <div ref={scrollableRef} className={styles.tracksListScroller}>
+        {/* The large inner element to hold all of the items */}
+        <div
+          className={styles.tracksListRows}
+          style={{
+            height: `${virtualizer.getTotalSize()}px`,
+            width: '100%',
+            position: 'relative',
+          }}
+        >
+          {/* Only the visible items in the virtualizer, manually positioned to be in view */}
+          {virtualizer.getVirtualItems().map((virtualItem) => {
+            const track = tracks[virtualItem.index];
+            return (
+              <TrackRow
+                key={virtualItem.key}
+                selected={selected.includes(track._id)}
+                track={track}
+                isPlaying={trackPlayingID === track._id}
+                index={virtualItem.index}
+                onMouseDown={selectTrack}
+                onClick={selectTrackClick}
+                onContextMenu={showContextMenu}
+                onDoubleClick={startPlayback}
+                draggable={reorderable}
+                reordered={
+                  (reordered && reordered.includes(track._id)) || false
+                }
+                onDragStart={onReorderStart}
+                onDragEnd={onReorderEnd}
+                onDrop={onDrop}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: `${virtualItem.size}px`,
+                  transform: `translateY(${virtualItem.start}px)`,
+                }}
+              />
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }

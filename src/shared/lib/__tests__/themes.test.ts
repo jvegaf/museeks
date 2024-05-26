@@ -4,9 +4,9 @@ import { themes } from '../themes';
 
 describe('themes', () => {
   test('themes should have a unique identifier', () => {
-    const themeIds = themes.map((theme) => theme._id);
+    const themeIDs = themes.map((theme) => theme._id);
 
-    expect(new Set(themeIds).size).toBe(themeIds.length);
+    expect(new Set(themeIDs).size).toBe(themeIDs.length);
   });
 
   test('themeSource should be either "light" or "dark"', () => {
@@ -27,7 +27,9 @@ describe('themes', () => {
     const [firstTheme] = themes;
 
     themes.forEach((theme) => {
-      expect(Object.keys(theme.variables)).toStrictEqual(Object.keys(firstTheme.variables));
+      expect(Object.keys(theme.variables)).toStrictEqual(
+        Object.keys(firstTheme.variables),
+      );
     });
   });
 });

@@ -4,6 +4,8 @@ import fs from 'fs';
 import * as mmd from 'music-metadata';
 import { globby } from 'globby';
 
+import logger from '../../shared/lib/logger';
+
 const SUPPORTED_COVER_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.bmp', '.gif'];
 const SUPPORTED_COVER_NAMES = ['album', 'albumart', 'folder', 'cover', 'front'];
 
@@ -18,7 +20,9 @@ export const parseBase64 = (format: string, data: string): string => {
  * Determine if a file is a valid cover or not
  */
 const isValidFilename = (pathname: path.ParsedPath): boolean => {
-  const isExtensionValid = SUPPORTED_COVER_EXTENSIONS.includes(pathname.ext.toLowerCase());
+  const isExtensionValid = SUPPORTED_COVER_EXTENSIONS.includes(
+    pathname.ext.toLowerCase(),
+  );
   const isNameValid = SUPPORTED_COVER_NAMES.some((name) => {
     return pathname.name.toLowerCase().includes(name);
   });
@@ -29,12 +33,16 @@ const isValidFilename = (pathname: path.ParsedPath): boolean => {
 /**
  * Smart fetch cover (from id3 or file directory)
  */
-export const fetchCover = async (trackPath: string, ignoreId3 = false, base64 = false): Promise<string | null> => {
+export const fetchCover = async (
+  trackPath: string,
+  ignoreID3 = false,
+  base64 = false,
+): Promise<string | null> => {
   if (!trackPath) {
     return null;
   }
 
-  if (!ignoreId3) {
+  if (!ignoreID3) {
     const data = await mmd.parseFile(trackPath);
     const picture = data.common.picture && data.common.picture[0];
 
@@ -66,11 +74,15 @@ export const fetchCover = async (trackPath: string, ignoreId3 = false, base64 = 
 /**
  * Returns the given file as a base64 string
  */
-export const getFileAsBase64 = async (filePath: string): Promise<string | null> => {
+export const getFileAsBase64 = async (
+  filePath: string,
+): Promise<string | null> => {
   try {
     const content = fs.readFileSync(filePath, { encoding: 'base64' });
     return parseBase64(path.extname(filePath).substr(1), content);
-  } catch {
+  } catch (err) {
+    logger.warn('Could not get cover as base64:');
+    logger.warn(err);
     return null;
   }
 };

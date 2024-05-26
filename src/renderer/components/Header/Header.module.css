@@ -12,12 +12,12 @@
 }
 
 .header {
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: solid 1px var(--border-color);
   background-color: var(--header-bg);
   color: var(--header-color);
   padding: 0 10px;
   display: flex;
-  align-items: center;
+  align-items: stretch;
   justify-content: space-between;
   height: 50px;
   flex: 0 0 auto;
@@ -27,7 +27,6 @@
 }
 
 .header__mainControls {
-  width: 220px;
   flex: 0 0 auto;
   display: flex;
   align-items: center;
@@ -36,25 +35,43 @@
 
 .header__search {
   -webkit-app-region: no-drag;
-  width: 220px;
+  margin-left: 12px;
   flex: 0 0 auto;
   display: flex;
   justify-content: flex-end;
-}
-
-.header__search__input {
-  display: block;
-  font-size: inherit;
-  width: 100%;
-  padding: 6px 12px;
-  background-color: var(--search-bg);
-  border: 1px solid var(--border-color);
-  color: var(--text);
-  border-radius: var(--border-radius);
 }
 
 .header__playingBar {
   flex: 1 1 auto;
   min-width: 0;
   max-width: 600px;
+}
+
+.header__queue {
+  display: flex;
+  align-items: center;
+}
+
+.queueToggle {
+  line-height: 22px;
+  margin-left: 12px;
+  color: inherit;
+  border: 0;
+  background: transparent;
+  font-size: 14px;
+  box-shadow: none;
+  -webkit-app-region: no-drag;
+}
+
+.queueContainer {
+  -webkit-app-region: no-drag;
+  display: none;
+  position: absolute;
+  z-index: 1000;
+  text-align: left;
+  right: 0;
+
+  &[data-state='open'] {
+    display: block;
+  }
 }

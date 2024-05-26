@@ -4,14 +4,24 @@
   padding: 6px 8px;
   border-radius: var(--border-radius);
   border: solid 1px var(--button-border);
+  cursor: pointer;
+
+  &:active {
+    opacity: 0.5;
+  }
 }
 
 .danger {
   color: white;
-  background-color: #de4343;
+  background-color: #b63333;
 }
 
 .small {
   font-size: 10px;
   padding: 1px 5px;
+}
+
+.block {
+  display: block;
+  width: 100%;
 }

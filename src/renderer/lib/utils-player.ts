@@ -4,7 +4,10 @@ import { TrackModel } from '../../shared/types/museeks';
  * Shuffle an array with a Player behavior in mind:
  * the currently-playing track should remain the same,
  */
-export const shuffleTracks = (tracks: TrackModel[], index: number): TrackModel[] => {
+export const shuffleTracks = (
+  tracks: TrackModel[],
+  index: number,
+): TrackModel[] => {
   const shuffledTracks = [...tracks];
   const currentTrack = shuffledTracks.splice(index, 1)[0];
 
@@ -23,5 +26,5 @@ export const shuffleTracks = (tracks: TrackModel[], index: number): TrackModel[]
 
   shuffledTracks.unshift(currentTrack);
 
-  return shuffledTracks;
+  return [...shuffledTracks];
 };

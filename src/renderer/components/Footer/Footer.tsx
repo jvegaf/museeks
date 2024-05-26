@@ -1,31 +1,32 @@
 import { useCallback } from 'react';
-import { useLocation, NavLink } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import Icon from 'react-fontawesome';
-import { useSelector } from 'react-redux';
 
-import { getStatus } from '../../lib/utils-library';
-import { RootState } from '../../store/reducers';
 import ProgressBar from '../ProgressBar/ProgressBar';
+import useLibraryStore from '../../stores/useLibraryStore';
 
 import styles from './Footer.module.css';
 
 export default function Footer() {
-  const library = useSelector((state: RootState) => state.library);
-  useLocation();
-  const isPlaylistView = useLocation().pathname.startsWith('/playlists');
+  const refresh = useLibraryStore((state) => state.refresh);
+  const refreshing = useLibraryStore((state) => state.refreshing);
 
   const getStatusContent = useCallback(() => {
-    const { processed, total } = library.refresh;
+    const { processed, total } = refresh;
 
-    if (library.refreshing) {
-      // Sketchy,
+    if (refreshing) {
+      // Sketchy
       const isScanning = total === 0;
       const progress = total > 0 ? Math.round((processed / total) * 100) : 100;
 
       return (
         <div className={styles.footer__libraryRefresh}>
           <div className={styles.footer__libraryRefresh__progress}>
-            {isScanning ? <>scanning tracks...</> : <ProgressBar progress={progress} animated={total === 0} />}
+            {isScanning ? (
+              <>scanning tracks...</>
+            ) : (
+              <ProgressBar progress={progress} animated={total === 0} />
+            )}
           </div>
           {total > 0 && (
             <div className={styles.footer__libraryRefresh__count}>
@@ -38,42 +39,50 @@ export default function Footer() {
 
     // Else, return the amount of time for the library or the playlist depending
     // of the route
-    return <>{getStatus(isPlaylistView ? library.tracks.playlist : library.tracks.library)}</>;
-  }, [library.refresh, library.refreshing, library.tracks.library, library.tracks.playlist, isPlaylistView]);
+    // TODO: fix playlist view
+    return null;
+    // return <>{getStatus(library.tracks)}</>;
+  }, [refresh, refreshing]);
 
   return (
     <footer className={styles.footer}>
       <div className={styles.footer__navigation}>
         <div className={styles.footer__navigation__linkgroup}>
           <NavLink
-            to='/library'
+            to="/library"
             className={({ isActive }) =>
-              `${styles.footer__navigation__link} ${isActive && styles.footer__navigation__linkIsActive}`
+              `${styles.footer__navigation__link} ${
+                isActive && styles.footer__navigation__linkIsActive
+              }`
             }
-            title='Library'
+            title="Library"
             draggable={false}
           >
-            <Icon name='align-justify' fixedWidth />
+            <Icon name="align-justify" fixedWidth />
           </NavLink>
           <NavLink
-            to='/playlists'
+            to="/playlists"
             className={({ isActive }) =>
-              `${styles.footer__navigation__link} ${isActive && styles.footer__navigation__linkIsActive}`
+              `${styles.footer__navigation__link} ${
+                isActive && styles.footer__navigation__linkIsActive
+              }`
             }
-            title='Playlists'
+            title="Playlists"
             draggable={false}
           >
-            <Icon name='star' fixedWidth />
+            <Icon name="star" fixedWidth />
           </NavLink>
           <NavLink
-            to='/settings'
+            to="/settings"
             className={({ isActive }) =>
-              `${styles.footer__navigation__link} ${isActive && styles.footer__navigation__linkIsActive}`
+              `${styles.footer__navigation__link} ${
+                isActive && styles.footer__navigation__linkIsActive
+              }`
             }
-            title='Settings'
+            title="Settings"
             draggable={false}
           >
-            <Icon name='gear' fixedWidth />
+            <Icon name="gear" fixedWidth />
           </NavLink>
         </div>
       </div>

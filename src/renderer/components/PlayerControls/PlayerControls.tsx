@@ -1,30 +1,42 @@
 import Icon from 'react-fontawesome';
 
 import VolumeControl from '../VolumeControl/VolumeControl';
-import * as PlayerActions from '../../store/actions/PlayerActions';
 import { PlayerStatus } from '../../../shared/types/museeks';
+import usePlayerStore, { usePlayerAPI } from '../../stores/usePlayerStore';
 
 import styles from './PlayerControls.module.css';
 
-type Props = {
-  playerStatus: PlayerStatus;
-};
+export default function PlayerControls() {
+  const playerAPI = usePlayerAPI();
+  const playerStatus = usePlayerStore((state) => state.playerStatus);
 
-export default function PlayerControls(props: Props) {
   return (
     <div className={styles.playerControls}>
-      <button type='button' className={styles.control} title='Previous' onClick={PlayerActions.previous}>
-        <Icon name='backward' />
+      <button
+        type="button"
+        className={styles.control}
+        title="Previous"
+        onClick={playerAPI.previous}
+      >
+        <Icon name="backward" />
       </button>
       <button
         className={`${styles.control} ${styles.play}`}
-        title={props.playerStatus === PlayerStatus.PLAY ? 'Pause' : 'Play'}
-        onClick={PlayerActions.playPause}
+        title={playerStatus === PlayerStatus.PLAY ? 'Pause' : 'Play'}
+        onClick={playerAPI.playPause}
       >
-        <Icon name={props.playerStatus === PlayerStatus.PLAY ? 'pause' : 'play'} fixedWidth />
+        <Icon
+          name={playerStatus === PlayerStatus.PLAY ? 'pause' : 'play'}
+          fixedWidth
+        />
       </button>
-      <button type='button' className={styles.control} title='Next' onClick={PlayerActions.next}>
-        <Icon name='forward' />
+      <button
+        type="button"
+        className={styles.control}
+        title="Next"
+        onClick={playerAPI.next}
+      >
+        <Icon name="forward" />
       </button>
       <VolumeControl />
     </div>

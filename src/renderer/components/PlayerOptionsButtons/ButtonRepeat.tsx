@@ -1,9 +1,9 @@
 import InlineSVG from 'svg-inline-react';
 import cx from 'classnames';
 
-import * as PlayerActions from '../../store/actions/PlayerActions';
 import { Repeat } from '../../../shared/types/museeks';
 import icons from '../../lib/icons';
+import usePlayerStore, { usePlayerAPI } from '../../stores/usePlayerStore';
 
 import styles from './common.module.css';
 
@@ -14,38 +14,17 @@ const svgMap = {
   default: icons.REPEAT,
 };
 
-type Props = {
-  repeat: Repeat;
-};
+export default function ButtonRepeat() {
+  const repeat = usePlayerStore((state) => state.repeat);
+  const playerAPI = usePlayerAPI();
 
-export default function ButtonRepeat(props: Props) {
-  const svg = svgMap[props.repeat] || svgMap.default;
+  const svg = svgMap[repeat] || svgMap.default;
   const buttonClasses = cx(styles.button, {
-    [styles.active]: props.repeat === Repeat.ONE || props.repeat === Repeat.ALL,
+    [styles.active]: repeat === Repeat.ONE || repeat === Repeat.ALL,
   });
 
-  const toggleRepeat = () => {
-    let repeat = Repeat.NONE;
-
-    switch (props.repeat) {
-      case Repeat.NONE:
-        repeat = Repeat.ALL;
-        break;
-      case Repeat.ALL:
-        repeat = Repeat.ONE;
-        break;
-      case Repeat.ONE:
-        repeat = Repeat.NONE;
-        break;
-      default:
-        break;
-    }
-
-    PlayerActions.repeat(repeat);
-  };
-
   return (
-    <button className={buttonClasses} onClick={toggleRepeat}>
+    <button className={buttonClasses} onClick={() => playerAPI.toggleRepeat()}>
       <InlineSVG src={svg} className={styles.icon} />
     </button>
   );

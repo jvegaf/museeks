@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 
 import QueueEmpty from '../QueueEmpty/QueueEmpty';
 import QueueList from '../QueueList/QueueList';
@@ -15,17 +15,19 @@ export default function Queue(props: Props) {
   const { queue, queueCursor } = props;
   let content: React.ReactNode;
 
-  if (queueCursor !== null) {
-    const shownQueue = queue.slice(queueCursor + 1, queueCursor + 21);
-
-    if (shownQueue.length === 0) {
-      content = <QueueEmpty />;
-    } else {
-      content = <QueueList queue={queue} queueCursor={queueCursor} />;
+  const isQueueEmpty = useMemo(() => {
+    if (queueCursor == null) {
+      return null;
     }
 
-    return <div className={`${styles.queue} text-left`}>{content}</div>;
+    return queue.slice(queueCursor + 1).length === 0;
+  }, [queue, queueCursor]);
+
+  if (isQueueEmpty || queueCursor == null) {
+    content = <QueueEmpty />;
+  } else {
+    content = <QueueList queue={queue} queueCursor={queueCursor} />;
   }
 
-  return null;
+  return <div className={`${styles.queue} text-left`}>{content}</div>;
 }

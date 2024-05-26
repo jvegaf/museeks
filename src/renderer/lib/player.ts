@@ -13,9 +13,9 @@ interface PlayerOptions {
  * Open questions:
  *   - Should it emit IPC events itself? Or expose events?
  *   - Should it hold the concepts of queue/random/etc? (in other words, should
- *     we merge PlayerActions here?)
+ *     we merge player actions here?)
  */
-export default class Player {
+class Player {
   private audio: HTMLAudioElement;
   private durationThresholdReached: boolean;
   private track: TrackModel | null;
@@ -46,7 +46,8 @@ export default class Player {
   }
 
   async play() {
-    if (!this.audio.src) throw new Error('Trying to play a track but not audio.src is defined');
+    if (!this.audio.src)
+      throw new Error('Trying to play a track but not audio.src is defined');
 
     await this.audio.play();
   }
@@ -88,10 +89,10 @@ export default class Player {
     this.audio.defaultPlaybackRate = playbackRate;
   }
 
-  async setOutputDevice(deviceId: string) {
+  async setOutputDevice(deviceID: string) {
     // eslint-disable-next-line
     // @ts-ignore
-    await this.audio.setSinkId(deviceId);
+    await this.audio.setSinkId(deviceID);
   }
 
   getTrack() {
@@ -119,10 +120,26 @@ export default class Player {
   }
 
   isThresholdReached() {
-    if (!this.durationThresholdReached && this.audio.currentTime >= this.audio.duration * this.threshold) {
+    if (
+      !this.durationThresholdReached &&
+      this.audio.currentTime >= this.audio.duration * this.threshold
+    ) {
       this.durationThresholdReached = true;
     }
 
     return this.durationThresholdReached;
   }
 }
+
+/**
+ * Export a singleton by default, for the sake of simplicity (and we only need
+ * one anyway)
+ */
+const { config } = window.MuseeksAPI;
+
+export default new Player({
+  volume: config.__initialConfig['audioVolume'],
+  playbackRate: config.__initialConfig['audioPlaybackRate'],
+  audioOutputDevice: config.__initialConfig['audioOutputDevice'],
+  muted: config.__initialConfig['audioMuted'],
+});

@@ -4,13 +4,13 @@ import type { MenuItemConstructorOptions } from 'electron';
 import React, { useCallback, useState } from 'react';
 import Icon from 'react-fontawesome';
 
-import * as PlaylistsActions from '../../store/actions/PlaylistsActions';
+import PlaylistsAPI from '../../stores/PlaylistsAPI';
 import PlaylistsNavLink from '../PlaylistsNavLink/PlaylistsNavLink';
 import { PlaylistModel } from '../../../shared/types/museeks';
 
 import styles from './PlaylistsNav.module.css';
 
-const { Menu } = window.MuseeksAPI.remote;
+const { menu } = window.ElectronAPI;
 
 type Props = {
   playlists: PlaylistModel[];
@@ -19,18 +19,18 @@ type Props = {
 export default function PlaylistsNav(props: Props) {
   const [renamed, setRenamed] = useState<string | null>(null);
 
-  const showContextMenu = useCallback((playlistId: string) => {
+  const showContextMenu = useCallback((playlistID: string) => {
     const template: MenuItemConstructorOptions[] = [
       {
         label: 'Rename',
         click: () => {
-          setRenamed(playlistId);
+          setRenamed(playlistID);
         },
       },
       {
         label: 'Delete',
         click: async () => {
-          await PlaylistsActions.remove(playlistId);
+          await PlaylistsAPI.remove(playlistID);
         },
       },
       {
@@ -39,7 +39,7 @@ export default function PlaylistsNav(props: Props) {
       {
         label: 'Duplicate',
         click: async () => {
-          await PlaylistsActions.duplicate(playlistId);
+          await PlaylistsAPI.duplicate(playlistID);
         },
       },
       {
@@ -48,23 +48,21 @@ export default function PlaylistsNav(props: Props) {
       {
         label: 'Export',
         click: async () => {
-          await PlaylistsActions.exportToM3u(playlistId);
+          await PlaylistsAPI.exportToM3u(playlistID);
         },
       },
     ];
 
-    const context = Menu.buildFromTemplate(template);
-
-    context.popup({}); // Let it appear
+    menu.showContextMenu(template);
   }, []);
 
   const createPlaylist = useCallback(async () => {
     // Todo 'new playlist 1', 'new playlist 2' ...
-    await PlaylistsActions.create('New playlist', [], false, true);
+    await PlaylistsAPI.create('New playlist', [], false, true);
   }, []);
 
-  const rename = useCallback(async (_id: string, name: string) => {
-    await PlaylistsActions.rename(_id, name);
+  const rename = useCallback(async (playlistID: string, name: string) => {
+    await PlaylistsAPI.rename(playlistID, name);
   }, []);
 
   const keyDown = useCallback(
@@ -90,7 +88,7 @@ export default function PlaylistsNav(props: Props) {
         }
       }
     },
-    [rename, renamed]
+    [rename, renamed],
   );
 
   const blur = useCallback(
@@ -101,7 +99,7 @@ export default function PlaylistsNav(props: Props) {
 
       setRenamed(null);
     },
-    [rename, renamed]
+    [rename, renamed],
   );
 
   const focus = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
@@ -118,7 +116,7 @@ export default function PlaylistsNav(props: Props) {
       navItemContent = (
         <input
           className={styles.item__input}
-          type='text'
+          type="text"
           defaultValue={elem.name}
           onKeyDown={keyDown}
           onBlur={blur}
@@ -128,7 +126,11 @@ export default function PlaylistsNav(props: Props) {
       );
     } else {
       navItemContent = (
-        <PlaylistsNavLink className={styles.item__link} playlistId={elem._id} onContextMenu={showContextMenu}>
+        <PlaylistsNavLink
+          className={styles.item__link}
+          playlistID={elem._id}
+          onContextMenu={showContextMenu}
+        >
           {elem.name}
         </PlaylistsNavLink>
       );
@@ -142,8 +144,12 @@ export default function PlaylistsNav(props: Props) {
       <div className={styles.playlistsNav__header}>
         <h4 className={styles.playlistsNav__title}>Playlists</h4>
         <div className={styles.actions}>
-          <button className={styles.action} onClick={createPlaylist} title='New playlist'>
-            <Icon name='plus' />
+          <button
+            className={styles.action}
+            onClick={createPlaylist}
+            title="New playlist"
+          >
+            <Icon name="plus" />
           </button>
         </div>
       </div>

@@ -28,42 +28,6 @@ export enum SortOrder {
 }
 
 /**
- * Redux
- */
-export interface Action {
-  // TODO action specific types
-  type: string;
-  payload?: any;
-}
-
-/**
- * Untyped libs / helpers
- */
-export type LinvoSchema<Schema> = {
-  _id: string;
-  find: any;
-  findOne: any;
-  insert: any;
-  copy: any; // TODO better types?
-  remove: any;
-  save: any;
-  serialize: any;
-  update: any;
-  ensureIndex: any;
-  // bluebird-injected
-  findAsync: any;
-  findOneAsync: any;
-  insertAsync: any;
-  copyAsync: any;
-  removeAsync: any;
-  saveAsync: any;
-  serializeAsync: any;
-  updateAsync: any;
-} & {
-  [Property in keyof Schema]: Schema[Property];
-};
-
-/**
  * App models
  */
 export interface Track {
@@ -103,24 +67,37 @@ export interface Playlist {
 /**
  * Database schemes
  */
-export type TrackModel = LinvoSchema<Track>;
-export type PlaylistModel = LinvoSchema<Playlist>;
+export type TrackModel = PouchDB.Core.ExistingDocument<
+  Track & PouchDB.Core.AllDocsMeta
+>;
+
+export type PlaylistModel = PouchDB.Core.ExistingDocument<
+  Playlist & PouchDB.Core.AllDocsMeta
+>;
 
 /**
  * Editable track fields (via right-click -> edit track)
  */
-export type TrackEditableFields = Pick<TrackModel, 'title' | 'artist' | 'album' | 'genre'>;
+export type TrackEditableFields = Pick<
+  TrackModel,
+  'title' | 'artist' | 'album' | 'genre'
+>;
 
 /**
  * Various
  */
 export interface Toast {
-  _id: number;
+  id: string;
   content: string;
   type: ToastType;
 }
 
 export type ToastType = 'success' | 'danger' | 'warning';
+
+export interface LibrarySort {
+  by: SortBy;
+  order: SortOrder;
+}
 
 /**
  * Config
@@ -133,17 +110,21 @@ export interface ConfigBounds {
   y: number;
 }
 
+// https://github.com/microsoft/TypeScript/issues/29729#issuecomment-460346421
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnyThemeID = string & { whatever?: any };
 // TODO: how to automate this? Maybe losen types to "string"
-type ThemeIds = 'dark' | 'light' | 'dark-legacy';
+type ThemeIDs = 'dark' | 'light' | AnyThemeID;
 
 export interface Config {
-  theme: ThemeIds | '__system';
+  theme: ThemeIDs | '__system';
   audioVolume: number;
   audioPlaybackRate: number;
   audioOutputDevice: string;
   audioMuted: boolean;
   audioShuffle: boolean;
   audioRepeat: Repeat;
+  tracksDensity: 'normal' | 'compact';
   defaultView: string;
   librarySort: {
     by: SortBy;
@@ -152,7 +133,6 @@ export interface Config {
   // musicFolders: string[],
   sleepBlocker: boolean;
   autoUpdateChecker: boolean;
-  minimizeToTray: boolean;
   displayNotifications: boolean;
   bounds: ConfigBounds;
 }
@@ -162,7 +142,7 @@ export interface Config {
  */
 
 export interface Theme {
-  _id: ThemeIds;
+  _id: ThemeIDs;
   name: string;
   themeSource: Electron.NativeTheme['themeSource'];
   variables: Record<string, string>;
@@ -195,3 +175,18 @@ export interface MatchResult {
   matches: number;
   of: number;
 }
+/**
+ * Helpers
+ */
+
+type StringableKey<T> = T extends readonly unknown[]
+  ? number extends T['length']
+    ? number
+    : `${number}`
+  : string | number;
+
+export type Path<T> = T extends object
+  ? {
+      [P in keyof T & StringableKey<T>]: `${P}` | `${P}.${Path<T[P]>}`;
+    }[keyof T & StringableKey<T>]
+  : never;

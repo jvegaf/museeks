@@ -1,30 +1,23 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useRef } from 'react';
 import Keybinding from 'react-keybinding-component';
 
-import * as LibraryActions from '../../store/actions/LibraryActions';
-import useDebounce from '../../hooks/useDebounce';
 import { isCtrlKey } from '../../lib/utils-events';
+import useLibraryStore, { useLibraryAPI } from '../../stores/useLibraryStore';
 
 import styles from './Search.module.css';
 
 export default function Search() {
+  const search = useLibraryStore((state) => state.search);
+  const libraryAPI = useLibraryAPI();
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const [search, setSearch] = useState('');
-  const debouncedSearch = useDebounce(search, 250);
-
-  const onClear = useCallback(() => setSearch(''), []);
-  const onChange = useCallback<React.ChangeEventHandler<HTMLInputElement>>((event) => {
-    setSearch(event.currentTarget.value);
-  }, []);
-
-  useEffect(() => {
-    if (search === '') {
-      LibraryActions.search(search);
-    } else {
-      LibraryActions.search(debouncedSearch);
-    }
-  }, [debouncedSearch, search]);
+  const onClear = useCallback(() => libraryAPI.search(''), [libraryAPI]);
+  const onChange = useCallback<React.ChangeEventHandler<HTMLInputElement>>(
+    (event) => {
+      libraryAPI.search(event.currentTarget.value);
+    },
+    [libraryAPI],
+  );
 
   // ctrl/cmf+f shortcut
   const onKey = (e: KeyboardEvent) => {
@@ -38,9 +31,9 @@ export default function Search() {
   return (
     <div className={styles.search__container}>
       <input
-        type='text'
+        type="text"
         className={styles.search__input}
-        placeholder='search...'
+        placeholder="search..."
         value={search}
         onChange={onChange}
         ref={inputRef}

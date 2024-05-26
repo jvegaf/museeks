@@ -1,13 +1,12 @@
 import os from 'os';
 import path from 'path';
 
+import '@total-typescript/ts-reset';
 import { Menu, app } from '@electron/remote';
-import { ipcRenderer, shell } from 'electron';
-import TeenyConf from 'teeny-conf';
+import { IpcRendererEvent, contextBridge, ipcRenderer, shell } from 'electron';
 
 import { Config, Track } from '../shared/types/museeks';
 import channels from '../shared/lib/ipc-channels';
-import Player from '../renderer/lib/player';
 import { parseUri } from '../shared/lib/utils-uri';
 
 import db from './db';
@@ -26,8 +25,6 @@ import db from './db';
  *     in an in-between state.
  */
 
-const pathUserData = app.getPath('userData');
-
 /*
 |--------------------------------------------------------------------------
 | File association - make it work one day
@@ -43,28 +40,79 @@ const pathUserData = app.getPath('userData');
 
 /*
 |--------------------------------------------------------------------------
+| Config API: the config lives in the main process and we communicate with
+| it via IPC
+|--------------------------------------------------------------------------
+*/
+
+const config = {
+  __initialConfig: ipcRenderer.sendSync(channels.CONFIG_GET_ALL),
+  getAll(): Promise<Config> {
+    return ipcRenderer.invoke(channels.CONFIG_GET_ALL);
+  },
+  get<T extends keyof Config>(key: T): Promise<Config[T]> {
+    return ipcRenderer.invoke(channels.CONFIG_GET, key);
+  },
+  set<T extends keyof Config>(key: T, value: Config[T]): Promise<void> {
+    return ipcRenderer.invoke(channels.CONFIG_SET, key, value);
+  },
+};
+
+/*
+|--------------------------------------------------------------------------
 | Window object extension
 | TODO: some of these should go to the main process and be converted to use
 | contextBridge.exposeToMainWorld + sandboxed renderer
 |--------------------------------------------------------------------------
 */
 
-const config = new TeenyConf<Config>(path.join(pathUserData, 'config.json'), {});
-
-const player = new Player({
-  volume: config.get('audioVolume'),
-  playbackRate: config.get('audioPlaybackRate'),
-  audioOutputDevice: config.get('audioOutputDevice'),
-  muted: config.get('audioMuted'),
-});
+const ElectronAPI = {
+  ipcRenderer: {
+    // FIXME unsafe
+    // All these usage should probably go to the main process, or we should
+    // expose explicit APIs for what those usages are trying to solve
+    on: (
+      channel: string,
+      listener: (event: IpcRendererEvent, value: unknown) => void,
+    ) => {
+      const listenerCount = ipcRenderer.listenerCount(channel);
+      if (listenerCount === 0) {
+        ipcRenderer.on(channel, listener);
+      } else {
+        // eslint-disable-next-line no-console
+        console.warn(
+          `Event "${channel}" already has ${listenerCount} listeners, aborting.`,
+        );
+      }
+    },
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    off: (
+      channel: string,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      _listener: (event: IpcRendererEvent, value: unknown) => void,
+    ) => {
+      // Because we function cannot be passed between preload / renderer,
+      // ipcRenderer.off does not work. Until we fix the FIXME unsafe above
+      ipcRenderer.removeAllListeners(channel);
+      // ipcRenderer.off(channel, listener);
+    },
+    send: ipcRenderer.send,
+    sendSync: ipcRenderer.sendSync,
+    invoke: ipcRenderer.invoke,
+  },
+  menu: {
+    showContextMenu: (template: Electron.MenuItemConstructorOptions[]) => {
+      const context = Menu.buildFromTemplate(template);
+      context.popup({});
+    },
+  },
+};
 
 // When editing something here, please update museeks.d.ts to extend the
 // window.MuseeksAPI global object.
-const API = {
-  __instantiated: false,
+const MuseeksAPI = {
   platform: os.platform(),
   version: app.getVersion(),
-  player,
   config,
   app: {
     ready: () => ipcRenderer.send(channels.APP_READY),
@@ -81,21 +129,22 @@ const API = {
       await ipcRenderer.invoke(channels.PLAYLISTS_RESOLVE_M3U, path),
   },
   covers: {
-    getCoverAsBase64: (track: Track) => ipcRenderer.invoke(channels.COVER_GET, track.path),
+    getCoverAsBase64: (track: Track) =>
+      ipcRenderer.invoke(channels.COVER_GET, track.path),
   },
   // TODO: all of the things below should be removed
-  remote: {
-    Menu,
-  },
   path: {
     parse: path.parse,
     resolve: path.resolve,
   },
   shell: {
     openExternal: shell.openExternal,
+    openUserDataDirectory: () => shell.openPath(app.getPath('userData')),
   },
 };
 
-window.MuseeksAPI = API;
+contextBridge.exposeInMainWorld('ElectronAPI', ElectronAPI);
+contextBridge.exposeInMainWorld('MuseeksAPI', MuseeksAPI);
 
-export type MuseeksAPI = typeof API;
+export type ElectronAPI = typeof ElectronAPI;
+export type MuseeksAPI = typeof MuseeksAPI;
