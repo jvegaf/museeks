@@ -44,7 +44,7 @@ export interface Track {
   key?: string;
   loweredMetas: {
     artist?: string[];
-    album?: string; 
+    album?: string;
     title?: string;
     genre?: string[];
   };
@@ -151,9 +151,9 @@ export interface Theme {
 export interface ResultTag {
   id: string;
   album?: string;
-  artist?: string;
+  artist?: string[];
   bpm?: number;
-  genre?: string;
+  genre?: string[];
   key?: string;
   duration: number;
   title: string;

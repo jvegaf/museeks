@@ -1,3 +1,5 @@
+import { ParseDuration } from 'src/shared/utils';
+
 import { ResultTag, Track } from '../../../shared/types/museeks';
 import FetchArtwork from '../artwork/fetcher';
 
@@ -36,8 +38,8 @@ const Update = async(track: Track, tag: ResultTag): Promise<Track> => {
     genre:    tag.genre,
     artwork:  await art(),
   };
-  
-  
+
+
   /**
    persisting disabled for debugging
   */
